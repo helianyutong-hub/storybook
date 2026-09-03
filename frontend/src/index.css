@@ -1,0 +1,544 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* === 圆角 === */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* === 核心颜色 === */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* === 功能颜色 (新增) === */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* === 主题特色颜色 (新增) === */
+  --color-theme-red: var(--theme-red);
+  --color-theme-green: var(--theme-green);
+  --color-theme-gold: var(--theme-gold);
+  --color-theme-blue: var(--theme-blue);
+
+  /* === 图表颜色 === */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* === 侧边栏颜色 === */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* === Hero 区域颜色 (新增) === */
+  --color-hero: var(--hero);
+  --color-hero-foreground: var(--hero-foreground);
+
+  /* === 阴影 === */
+  --shadow-sm: var(--ds-shadow-sm);
+  --shadow-md: var(--ds-shadow-md);
+  --shadow-lg: var(--ds-shadow-lg);
+  --shadow-xl: var(--ds-shadow-xl);
+
+  /* === 字号（仅覆盖基础 3 级，默认值与 Tailwind 一致） === */
+  --text-xs: var(--font-size-small);
+  --text-sm: var(--font-size-label);
+  --text-base: var(--font-size-body);
+}
+
+:root {
+  /* === 圆角基准值 === */
+  --radius: 0.625rem;
+
+  /* === 字体排版 === */
+  --font-family: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-size-display: 3.5rem;
+  --font-size-headline: 2rem;
+  --font-size-title: 1.5rem;
+  --font-size-body: 1rem;
+  --font-size-label: 0.875rem;
+  --font-size-small: 0.75rem;
+  --font-weight-bold: 700;
+  --font-weight-semibold: 600;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --line-height: 1.5;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+
+  /* === 间距系统 === */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* === 阴影层级 === */
+  --ds-shadow-sm: 0 1px 3px #171717;
+  --ds-shadow-md: 0 4px 12px #171717, 0 2px 4px #161616;
+  --ds-shadow-lg: 0 8px 24px #181818, 0 4px 8px #171717;
+  --ds-shadow-xl: 0 16px 48px #191919, 0 8px 16px #171717;
+  /* 向后兼容别名（供原生 CSS var(--shadow-*) 引用使用） */
+  --shadow-sm: var(--ds-shadow-sm);
+  --shadow-md: var(--ds-shadow-md);
+  --shadow-lg: var(--ds-shadow-lg);
+  --shadow-xl: var(--ds-shadow-xl);
+
+  /* === 动效时间 === */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* === 背景颜色 === */
+  --background: #141233;
+  --foreground: #f3eeff;
+
+  /* === 卡片 === */
+  --card: #211c45;
+  --card-foreground: #f3eeff;
+
+  /* === 弹出层 === */
+  --popover: #262047;
+  --popover-foreground: #f3eeff;
+
+  /* === 主色调 === */
+  --primary: #f6c97b;
+  --primary-foreground: #2a1e07;
+
+  /* === 次要色 === */
+  --secondary: #322b5e;
+  --secondary-foreground: #ece6ff;
+
+  /* === 柔和色 === */
+  --muted: #2a2450;
+  --muted-foreground: #b3a9de;
+
+  /* === 强调色 === */
+  --accent: #8b7be8;
+  --accent-foreground: #ffffff;
+
+  /* === 危险/错误色 === */
+  --destructive: #e57373;
+
+  /* === 边框和输入框 === */
+  --border: #3a336a;
+  --input: #3a336a;
+  --ring: #f6c97b;
+
+  /* === 功能颜色 (新增) === */
+  --success: #7db3a4;
+  --success-foreground: #fbfbfb;
+  --warning: #d4d1aa;
+  --warning-foreground: #343434;
+  --info: #8263b3;
+  --info-foreground: #fbfbfb;
+
+  /* === 主题特色颜色 (新增) === */
+  --theme-red: #e57373;
+  --theme-green: #62a68b;
+  --theme-gold: #d4d1aa;
+  --theme-blue: #8263b3;
+
+  /* === 图表颜色 === */
+  --chart-1: #c9b281;
+  --chart-2: #83abaf;
+  --chart-3: #595e72;
+  --chart-4: #d6e2c4;
+  --chart-5: #d1d8b0;
+
+  /* === 侧边栏 === */
+  --sidebar: #fbfbfb;
+  --sidebar-foreground: #f3eeff;
+  --sidebar-primary: #343434;
+  --sidebar-primary-foreground: #2a1e07;
+  --sidebar-accent: #322b5e;
+  --sidebar-accent-foreground: #ece6ff;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #f6c97b;
+
+  /* === Hero 区域 (新增) === */
+  --hero: #343434;
+  --hero-foreground: #fbfbfb;
+
+  /* === 动画 Token === */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dark {
+  /* === 阴影层级 (深色模式) === */
+  --ds-shadow-sm: 0 1px 3px #101010;
+  --ds-shadow-md: 0 4px 12px #0e0e0e, 0 2px 4px #101010;
+  --ds-shadow-lg: 0 8px 24px #0c0c0c, 0 4px 8px #0e0e0e;
+  --ds-shadow-xl: 0 16px 48px #0a0a0a, 0 8px 16px #0c0c0c;
+  --shadow-sm: var(--ds-shadow-sm);
+  --shadow-md: var(--ds-shadow-md);
+  --shadow-lg: var(--ds-shadow-lg);
+  --shadow-xl: var(--ds-shadow-xl);
+
+  /* === 背景颜色 === */
+  --background: #252525;
+  --foreground: #fbfbfb;
+
+  /* === 卡片 === */
+  --card: #343434;
+  --card-foreground: #fbfbfb;
+
+  /* === 弹出层 === */
+  --popover: #343434;
+  --popover-foreground: #fbfbfb;
+
+  /* === 主色调 === */
+  --primary: #ebebeb;
+  --primary-foreground: #343434;
+
+  /* === 次要色 === */
+  --secondary: #454545;
+  --secondary-foreground: #fbfbfb;
+
+  /* === 柔和色 === */
+  --muted: #454545;
+  --muted-foreground: #b5b5b5;
+
+  /* === 强调色 === */
+  --accent: #454545;
+  --accent-foreground: #fbfbfb;
+
+  /* === 危险/错误色 === */
+  --destructive: #cdad9a;
+
+  /* === 边框和输入框 === */
+  --border: #3a336a;
+  --input: #3a336a;
+  --ring: #8e8e8e;
+
+  /* === 功能颜色 (新增) === */
+  --success: #8fe3c9;
+  --success-foreground: #141233;
+  --warning: #f6c97b;
+  --warning-foreground: #2a1e07;
+  --info: #8b7be8;
+  --info-foreground: #f3eeff;
+
+  /* === 主题特色颜色 (新增) === */
+  --theme-red: #cdad9a;
+  --theme-green: #8fe3c9;
+  --theme-gold: #f6c97b;
+  --theme-blue: #8b7be8;
+
+  /* === 图表颜色 === */
+  --chart-1: #8b7be8;
+  --chart-2: #8fe3c9;
+  --chart-3: #f6c97b;
+  --chart-4: #ffb3c6;
+  --chart-5: #f6c97b;
+
+  /* === 侧边栏 === */
+  --sidebar: #343434;
+  --sidebar-foreground: #fbfbfb;
+  --sidebar-primary: #f6c97b;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #454545;
+  --sidebar-accent-foreground: #fbfbfb;
+  --sidebar-border: #3a336a;
+  --sidebar-ring: #8e8e8e;
+
+  /* === Hero 区域 (新增) === */
+  --hero: #454545;
+  --hero-foreground: #fbfbfb;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Tailwind v4: container no longer auto-centers. Restore v3 behavior. */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (width >= 640px) { max-width: 640px; }
+  @media (width >= 768px) { max-width: 768px; }
+  @media (width >= 1024px) { max-width: 1024px; }
+  @media (width >= 1280px) { max-width: 1280px; }
+  @media (width >= 1536px) { max-width: 1536px; }
+}
+
+/* ================================================================
+   Page Transition System — uses CSS transition (NOT @keyframes)
+   to avoid onAnimationEnd bubbling issues from child elements.
+   
+   Supported modes (set via data-transition attribute):
+     fade        — opacity only (default, safest)
+     slide-up    — opacity + translateY (content rises into view)
+     slide-fade  — opacity + translateX (horizontal slide)
+     blur-fade   — opacity + filter:blur (frosted glass feel)
+     scale       — opacity + scale (zoom in/out)
+     bounce      — opacity + scale with bounce easing
+     none        — instant swap, no animation
+   ================================================================ */
+.page-transition {
+  transition:
+    opacity var(--duration-normal, 200ms) var(--ease-default, ease),
+    transform var(--duration-normal, 200ms) var(--ease-default, ease),
+    filter var(--duration-normal, 200ms) var(--ease-default, ease);
+}
+
+/* === Default: fade (opacity only) === */
+.page-transition.fade-out { opacity: 0; }
+.page-transition.fade-in  { opacity: 1; }
+
+/* === slide-up === */
+.page-transition[data-transition="slide-up"].fade-out {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.page-transition[data-transition="slide-up"].fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === slide-fade (horizontal) === */
+.page-transition[data-transition="slide-fade"].fade-out {
+  opacity: 0;
+  transform: translateX(-24px);
+}
+.page-transition[data-transition="slide-fade"].fade-in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* === blur-fade (glassmorphism) === */
+.page-transition[data-transition="blur-fade"].fade-out {
+  opacity: 0;
+  filter: blur(12px);
+}
+.page-transition[data-transition="blur-fade"].fade-in {
+  opacity: 1;
+  filter: blur(0px);
+}
+
+/* === scale (zoom) === */
+.page-transition[data-transition="scale"].fade-out {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.page-transition[data-transition="scale"].fade-in {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* === bounce (scale + bounce easing override) === */
+.page-transition[data-transition="bounce"] {
+  transition:
+    opacity var(--duration-normal, 200ms) var(--ease-default, ease),
+    transform var(--duration-slow, 300ms) var(--ease-bounce, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    filter var(--duration-normal, 200ms) var(--ease-default, ease);
+}
+.page-transition[data-transition="bounce"].fade-out {
+  opacity: 0;
+  transform: scale(0.92);
+}
+.page-transition[data-transition="bounce"].fade-in {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* === none (instant) === */
+.page-transition[data-transition="none"] {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+   睡前故事书 · 夜间安抚主题
+   ============================================================ */
+:root {
+  /* 背景：深靛蓝夜空 */
+  --background: #141233;
+  --foreground: #f3eeff;
+
+  /* 卡片：微提亮的夜色 */
+  --card: #211c45;
+  --card-foreground: #f3eeff;
+
+  --popover: #262047;
+  --popover-foreground: #f3eeff;
+
+  /* 主色：月亮金 */
+  --primary: #f6c97b;
+  --primary-foreground: #2a1e07;
+
+  --secondary: #322b5e;
+  --secondary-foreground: #ece6ff;
+
+  --muted: #2a2450;
+  --muted-foreground: #b3a9de;
+
+  /* 强调：柔紫 */
+  --accent: #8b7be8;
+  --accent-foreground: #ffffff;
+
+  --destructive: #e57373;
+
+  --border: #3a336a;
+  --input: #3a336a;
+  --ring: #f6c97b;
+
+  /* 主题扩展色 */
+  --night-1: #1a1640;
+  --night-2: #2a2156;
+  --moon: #ffe6a8;
+  --star: #fff4cf;
+  --mint: #8fe3c9;
+  --rose: #ffb3c6;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #2c2560 0%, transparent 60%),
+    linear-gradient(180deg, #16123a 0%, #120f30 100%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: 'Nunito', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 让 shadcn 按钮更圆润、更柔和 */
+.btn-soft {
+  border-radius: 9999px;
+}
+
+/* 玻璃质感卡片 */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 插画动画 */
+.ill-float {
+  animation: ill-float 6s ease-in-out infinite;
+}
+.ill-float-slow {
+  animation: ill-float 9s ease-in-out infinite;
+}
+@keyframes ill-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* 生成中的星星闪烁 */
+.genie-twinkle {
+  animation: genie-twinkle 1.6s ease-in-out infinite;
+}
+@keyframes genie-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* 缓慢上浮（用于播放页文字） */
+.rise-in {
+  animation: rise-in 0.8s ease-out both;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 隐藏滚动条但保留滚动 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 移动端：页面左右留白更小 */
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+}
