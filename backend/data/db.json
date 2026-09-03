@@ -1,0 +1,1600 @@
+{
+  "users": [
+    {
+      "id": "06c6fadf-a50b-49d4-9db5-aa1e3d5bd9f8",
+      "name": "宝宝家长8000",
+      "method": "phone",
+      "identifier": "13800138000"
+    },
+    {
+      "id": "68f20263-a471-40dd-a10b-9fe1a3614367",
+      "name": "宝宝家长5678",
+      "method": "phone",
+      "identifier": "13912345678"
+    },
+    {
+      "id": "76c2928e-805e-4e04-a052-86ed7c9d8df7",
+      "name": "微信用户",
+      "method": "wechat",
+      "identifier": "wx_1788362614372"
+    },
+    {
+      "id": "287b27e1-3a22-4cf9-b590-4a1fcf812fbe",
+      "name": "微信用户",
+      "method": "wechat",
+      "identifier": "wx_1788362652281"
+    },
+    {
+      "id": "682ac55e-1e36-4d64-879e-ad884885b264",
+      "name": "微信用户",
+      "method": "wechat",
+      "identifier": "wx_1788363065003"
+    },
+    {
+      "id": "c6398fdd-853d-4956-a32f-90ac6ad99bbc",
+      "name": "微信小伙伴",
+      "method": "wechat",
+      "identifier": "wx_test_123"
+    },
+    {
+      "id": "f4a84c41-492a-4120-af84-51691c007176",
+      "name": "微信小伙伴",
+      "method": "wechat",
+      "identifier": "wx_test_999"
+    },
+    {
+      "id": "5e312206-66c2-4deb-84e4-c0fa345f5484",
+      "name": "微信小伙伴",
+      "method": "wechat",
+      "identifier": "wx_test_abc"
+    },
+    {
+      "id": "3a63b4d4-ef37-478b-8955-a45bab35a82e",
+      "name": "微信用户5475",
+      "method": "wechat",
+      "identifier": "wx_1788364055475"
+    },
+    {
+      "id": "6063f254-7192-4e33-ab20-f0e63f5a04c4",
+      "name": "测试家长",
+      "method": "wechat",
+      "identifier": "test_user_debug_001"
+    },
+    {
+      "id": "767b5a3e-0d02-4209-9d40-927f4e45a798",
+      "name": "测试家长",
+      "method": "wechat",
+      "identifier": "test_user_debug_002"
+    },
+    {
+      "id": "bb345589-5407-4e10-b166-7bce669455e9",
+      "name": "测试家长",
+      "method": "wechat",
+      "identifier": "test_user_debug_004"
+    },
+    {
+      "id": "8bf16b1c-7a38-4a4d-b35a-76565adcf04c",
+      "name": "测试家长2",
+      "method": "wechat",
+      "identifier": "test_user_debug_005"
+    },
+    {
+      "id": "9a1ef38c-eaf7-4aac-8e3d-f1bd74033966",
+      "name": "微信用户6511",
+      "method": "wechat",
+      "identifier": "wx_1788365826511"
+    },
+    {
+      "id": "75ec0fb6-5b13-4510-88f1-2112a84da51d",
+      "name": "微信用户2224",
+      "method": "wechat",
+      "identifier": "wx_1788365882224"
+    },
+    {
+      "id": "fa278823-6f96-4430-a28c-3250d1ba0160",
+      "name": "微信用户0517",
+      "method": "wechat",
+      "identifier": "wx_1788366080517"
+    },
+    {
+      "id": "49910e81-cad1-4516-94dd-e4430d936b53",
+      "name": "测试家长6",
+      "method": "wechat",
+      "identifier": "test_user_debug_006"
+    },
+    {
+      "id": "b8de8b96-c74c-439d-ad10-8471d82db55a",
+      "name": "测试家长7",
+      "method": "wechat",
+      "identifier": "test_user_debug_007"
+    },
+    {
+      "id": "496a09e3-5cd5-4d21-bf0c-153fe56ee5e3",
+      "name": "微信用户6243",
+      "method": "wechat",
+      "identifier": "wx_1788366376243"
+    },
+    {
+      "id": "5bee0d0c-0450-449e-8bcc-f0abf870bd35",
+      "name": "测试家长",
+      "method": "wechat",
+      "identifier": "prod_test_001"
+    },
+    {
+      "id": "df424274-bfea-4c3f-8795-2a164a04a56a",
+      "name": "测试家长2",
+      "method": "wechat",
+      "identifier": "prod_test_002"
+    },
+    {
+      "id": "05e5cd01-8d3f-4d27-bff3-a5f7159a8e8b",
+      "name": "微信用户1405",
+      "method": "wechat",
+      "identifier": "wx_1788366951405"
+    },
+    {
+      "id": "2c7c148e-fc77-4f5e-9fb1-093e86804154",
+      "name": "微信用户2024",
+      "method": "wechat",
+      "identifier": "wx_1788367102024"
+    },
+    {
+      "id": "a2ee1370-6ab1-4d41-894f-fe92a0b0c990",
+      "name": "微信用户8383",
+      "method": "wechat",
+      "identifier": "wx_1788367118383"
+    },
+    {
+      "id": "c3c5a2f8-7804-4433-ad84-1b05c685462e",
+      "name": "微信用户0711",
+      "method": "wechat",
+      "identifier": "wx_1788367170711"
+    },
+    {
+      "id": "cdc7aa7c-a531-421e-accf-580ee3440d7a",
+      "name": "微信用户9045",
+      "method": "wechat",
+      "identifier": "wx_1788367229045"
+    },
+    {
+      "id": "4a64dcfd-6c0b-45d2-b535-4c23bd6ed682",
+      "name": "微信用户7064",
+      "method": "wechat",
+      "identifier": "wx_1788394717064"
+    },
+    {
+      "id": "6b00ec08-68a0-4d2c-b45c-771fc34b6f45",
+      "name": "测试家长",
+      "method": "wechat",
+      "identifier": "verify_lang_001"
+    },
+    {
+      "id": "a402c873-bca1-479e-8eb0-cc96dbdad8e2",
+      "name": "微信用户2534",
+      "method": "wechat",
+      "identifier": "wx_1788397542534"
+    },
+    {
+      "id": "0b8d0fb4-d9f7-4ce0-a1f0-a852d66518a5",
+      "name": "微信用户4340",
+      "method": "wechat",
+      "identifier": "wx_1788397984340"
+    },
+    {
+      "id": "76e76ee6-ee0a-4985-b0aa-ed09f397ec02",
+      "name": "微信用户9614",
+      "method": "wechat",
+      "identifier": "wx_1788399689614"
+    },
+    {
+      "id": "860478f8-dea0-47ac-b9ad-c4756ac0d029",
+      "name": "微信用户8477",
+      "method": "wechat",
+      "identifier": "wx_1788403448477"
+    },
+    {
+      "id": "361d19c1-7302-4ad4-b1c3-2520892dc77f",
+      "name": "微信用户6683",
+      "method": "wechat",
+      "identifier": "wx_1788420846683"
+    },
+    {
+      "id": "1d80aa40-2f9d-4655-a9ad-5188c8b56339",
+      "name": "微信用户7727",
+      "method": "wechat",
+      "identifier": "wx_1788420927727"
+    }
+  ],
+  "tokens": {
+    "a0cf14f7-d9fb-42e9-b155-61c260985bd5": "06c6fadf-a50b-49d4-9db5-aa1e3d5bd9f8",
+    "e0ea5913-112c-4f6e-a103-567bac715778": "68f20263-a471-40dd-a10b-9fe1a3614367",
+    "5b266979-5472-47ed-a2f4-1eeee0e8cb82": "76c2928e-805e-4e04-a052-86ed7c9d8df7",
+    "83f051d5-b940-4e78-a55c-3119ca91c0bb": "287b27e1-3a22-4cf9-b590-4a1fcf812fbe",
+    "66c2ee51-b125-4399-987c-23fd61bcf8d2": "682ac55e-1e36-4d64-879e-ad884885b264",
+    "25909610-44b1-47dd-8aad-8ba070e131db": "c6398fdd-853d-4956-a32f-90ac6ad99bbc",
+    "0a75384f-f0ec-4ea4-b1ea-31b04edae91b": "c6398fdd-853d-4956-a32f-90ac6ad99bbc",
+    "c09cb4e8-8166-467b-a145-88ab17e47456": "c6398fdd-853d-4956-a32f-90ac6ad99bbc",
+    "de41afc4-a3e7-47e3-acbc-895913a1fc0c": "f4a84c41-492a-4120-af84-51691c007176",
+    "a589d9a7-6785-4ca7-b1fa-db7b44aa60da": "f4a84c41-492a-4120-af84-51691c007176",
+    "3012dbe9-81e0-4fb0-b1ed-676487ffb572": "5e312206-66c2-4deb-84e4-c0fa345f5484",
+    "c5984275-aec4-4db8-88c9-fbc4afc044e4": "3a63b4d4-ef37-478b-8955-a45bab35a82e",
+    "de4ea89d-5160-4ecd-afa3-cfb48289946a": "6063f254-7192-4e33-ab20-f0e63f5a04c4",
+    "f61569fc-2424-4c68-89c7-23b666a0d78d": "767b5a3e-0d02-4209-9d40-927f4e45a798",
+    "ac82a31a-992f-4c03-ab4f-70b66ecef50c": "bb345589-5407-4e10-b166-7bce669455e9",
+    "ca311e34-b0a5-4b2c-a7e9-c41dcbf8a552": "8bf16b1c-7a38-4a4d-b35a-76565adcf04c",
+    "80ecb002-8844-4f57-8309-ccb532ff672b": "9a1ef38c-eaf7-4aac-8e3d-f1bd74033966",
+    "8559da23-018e-48d9-809f-e14ca970dd65": "75ec0fb6-5b13-4510-88f1-2112a84da51d",
+    "da5ee152-81f5-4e84-9bac-0b7b473f66c5": "fa278823-6f96-4430-a28c-3250d1ba0160",
+    "0712bc8f-fa64-46b1-afbe-4567b43efc17": "49910e81-cad1-4516-94dd-e4430d936b53",
+    "ce9a763b-7184-482d-9a08-9e5bee6747aa": "b8de8b96-c74c-439d-ad10-8471d82db55a",
+    "f01ebfea-c607-440a-8fae-941b0e3abfad": "496a09e3-5cd5-4d21-bf0c-153fe56ee5e3",
+    "c14b0a1b-cf60-4687-b24f-5d2aca7bd157": "5bee0d0c-0450-449e-8bcc-f0abf870bd35",
+    "ccf2bc6d-6644-4134-8f29-2ce77568b8c2": "df424274-bfea-4c3f-8795-2a164a04a56a",
+    "bb4dee24-456f-45f0-848b-38393a6cb857": "05e5cd01-8d3f-4d27-bff3-a5f7159a8e8b",
+    "0bea50c3-d052-4738-b23f-a8f7bc989c05": "2c7c148e-fc77-4f5e-9fb1-093e86804154",
+    "4f2b5ec7-aa30-4933-bc4a-19ef114f904b": "a2ee1370-6ab1-4d41-894f-fe92a0b0c990",
+    "a9244fd5-3846-49c0-bc58-cac3824249c9": "c3c5a2f8-7804-4433-ad84-1b05c685462e",
+    "976973bf-1660-4396-af09-47b865c16a28": "cdc7aa7c-a531-421e-accf-580ee3440d7a",
+    "b2d574cd-5cc2-412d-8ff8-b942d1c30340": "4a64dcfd-6c0b-45d2-b535-4c23bd6ed682",
+    "896e08b5-93a4-4009-b57e-b095b6a8e462": "6b00ec08-68a0-4d2c-b45c-771fc34b6f45",
+    "88cd01cc-f790-48ab-b072-d4811bcef25d": "a402c873-bca1-479e-8eb0-cc96dbdad8e2",
+    "f2fc770d-9235-45e8-bb60-147201fd3674": "0b8d0fb4-d9f7-4ce0-a1f0-a852d66518a5",
+    "3b681bb7-fed4-4cf6-9a11-3694c5af6fe4": "76e76ee6-ee0a-4985-b0aa-ed09f397ec02",
+    "50992a9d-1b33-4604-981e-715eaf280be6": "860478f8-dea0-47ac-b9ad-c4756ac0d029",
+    "0b01eff5-b0a8-488e-ad44-237cbcccb9ad": "361d19c1-7302-4ad4-b1c3-2520892dc77f",
+    "9467b868-337c-4c83-b33c-1366769b376e": "1d80aa40-2f9d-4655-a9ad-5188c8b56339"
+  },
+  "stories": [
+    {
+      "id": "d0c4bdb5-2448-497e-ad71-e644925c4fe1",
+      "userId": "682ac55e-1e36-4d64-879e-ad884885b264",
+      "title": "朵朵的星空摇篮曲",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "music",
+      "duration": "medium",
+      "pageCount": 6,
+      "createdAt": "2026-09-02T15:31:49.723Z",
+      "approved": false,
+      "data": {
+        "id": "d0c4bdb5-2448-497e-ad71-e644925c4fe1",
+        "title": "朵朵的星空摇篮曲",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "music",
+          "duration": "medium",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p0-7683",
+            "text": "夜晚到了，朵朵揉了揉眼睛。窗外的树影慢慢安静下来。",
+            "scene": "夜幕降临，孩子准备入睡",
+            "illustration": {
+              "seed": 53755,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": false
+            }
+          },
+          {
+            "id": "p1-7747",
+            "text": "小熊悄悄说：“别怕，我陪朵朵一起。”",
+            "scene": "小熊来到孩子身边陪伴",
+            "illustration": {
+              "seed": 600948,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p2-5173",
+            "text": "温柔的云朵飘过来，朵朵和小熊坐上去轻轻摇。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 894625,
+              "palette": "dream",
+              "elements": [
+                "cloud",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p3-1141",
+            "text": "暖暖的云朵飘过来，朵朵和小熊坐上去轻轻摇。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 520095,
+              "palette": "dream",
+              "elements": [
+                "stars",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p4-7374",
+            "text": "朵朵打了个大大的哈欠，暖暖的困意悄悄来了。",
+            "scene": "困意袭来，慢慢放松",
+            "illustration": {
+              "seed": 519676,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p5-1096",
+            "text": "呼吸变得长长的，朵朵进入了甜甜的梦乡。晚安。",
+            "scene": "安然入睡，进入梦乡",
+            "illustration": {
+              "seed": 949999,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T15:31:49.723Z",
+        "approved": false
+      }
+    },
+    {
+      "id": "631a5023-aa1c-4e15-975d-4431697c9e7d",
+      "userId": "682ac55e-1e36-4d64-879e-ad884885b264",
+      "title": "朵朵和小熊的晚安时光",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "music",
+      "duration": "long",
+      "pageCount": 8,
+      "createdAt": "2026-09-02T15:49:57.897Z",
+      "approved": false,
+      "data": {
+        "id": "631a5023-aa1c-4e15-975d-4431697c9e7d",
+        "title": "朵朵和小熊的晚安时光",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "music",
+          "duration": "long",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 100
+        },
+        "pages": [
+          {
+            "id": "p0-2536",
+            "text": "夜晚到了，朵朵揉了揉眼睛。软绵绵的小床慢慢安静下来。",
+            "scene": "夜幕降临，孩子准备入睡",
+            "illustration": {
+              "seed": 359816,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": false
+            }
+          },
+          {
+            "id": "p1-1875",
+            "text": "朵朵看见小熊，慢慢晃着，心里甜甜的。",
+            "scene": "小熊来到孩子身边陪伴",
+            "illustration": {
+              "seed": 465128,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p2-5835",
+            "text": "小熊讲了个温柔的小秘密，朵朵咯咯地笑。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 55375,
+              "palette": "night",
+              "elements": [
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p3-3899",
+            "text": "小熊讲了个软软的小秘密，朵朵咯咯地笑。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 624698,
+              "palette": "dream",
+              "elements": [
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p4-5787",
+            "text": "小河依偎着，朵朵和小熊听得好开心。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 653920,
+              "palette": "dream",
+              "elements": [
+                "stars",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p5-1180",
+            "text": "小河悄悄看着，朵朵和小熊听得好开心。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 609113,
+              "palette": "cozy",
+              "elements": [
+                "river"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p6-5386",
+            "text": "小熊轻轻拍着朵朵的背，一下，又一下。",
+            "scene": "困意袭来，慢慢放松",
+            "illustration": {
+              "seed": 487740,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p7-6283",
+            "text": "朵朵睡着啦，梦里开满了轻轻的小花。晚安，朵朵。",
+            "scene": "安然入睡，进入梦乡",
+            "illustration": {
+              "seed": 315835,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon",
+                "stars",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T15:49:57.897Z",
+        "approved": false
+      }
+    },
+    {
+      "id": "s_test_001",
+      "userId": "6063f254-7192-4e33-ab20-f0e63f5a04c4",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "medium",
+      "pageCount": 2,
+      "createdAt": "2026-09-02T15:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_001",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "medium",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。",
+            "scene": "夜幕降临",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p2",
+            "text": "小熊走过来，轻轻坐在朵朵身边。",
+            "scene": "小熊陪伴",
+            "illustration": {
+              "seed": 456,
+              "palette": "dream",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T15:00:00.000Z",
+        "approved": true
+      }
+    },
+    {
+      "id": "s_test_002",
+      "userId": "767b5a3e-0d02-4209-9d40-927f4e45a798",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "medium",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T15:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_002",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "medium",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。",
+            "scene": "夜幕降临",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T15:00:00.000Z",
+        "approved": true
+      }
+    },
+    {
+      "id": "s_test_003",
+      "userId": "767b5a3e-0d02-4209-9d40-927f4e45a798",
+      "title": "朵朵和小熊的晚安时光",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "medium",
+      "pageCount": 6,
+      "createdAt": "2026-09-02T15:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_003",
+        "title": "朵朵和小熊的晚安时光",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "medium",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。窗外的树影慢慢安静下来。",
+            "scene": "夜幕降临，孩子准备入睡",
+            "illustration": {
+              "seed": 123456,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p2",
+            "text": "温柔的小熊走过来，轻轻坐在朵朵身边。",
+            "scene": "小熊来到孩子身边陪伴",
+            "illustration": {
+              "seed": 234567,
+              "palette": "dream",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p3",
+            "text": "朵朵和小熊一起数天上的小星星，一颗、两颗、三颗……",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 345678,
+              "palette": "dream",
+              "elements": [
+                "cloud",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p4",
+            "text": "温柔的云朵飘过来，朵朵和小熊坐上去轻轻摇。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 456789,
+              "palette": "dream",
+              "elements": [
+                "cloud",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p5",
+            "text": "朵朵打了个大大的哈欠，困意悄悄来了。",
+            "scene": "困意袭来，慢慢放松",
+            "illustration": {
+              "seed": 567890,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p6",
+            "text": "朵朵睡着啦，梦里开满了温柔小花。晚安，朵朵。",
+            "scene": "安然入睡，进入梦乡",
+            "illustration": {
+              "seed": 678901,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon",
+                "stars",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": false
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T15:00:00.000Z",
+        "approved": true
+      }
+    },
+    {
+      "id": "s_test_004",
+      "userId": "bb345589-5407-4e10-b166-7bce669455e9",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T16:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_004",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了。",
+            "scene": "夜景",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:00:00.000Z",
+        "approved": true
+      }
+    },
+    {
+      "id": "s_test_005",
+      "userId": "8bf16b1c-7a38-4a4d-b35a-76565adcf04c",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T16:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_005",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了。",
+            "scene": "夜景",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:00:00.000Z",
+        "approved": true
+      }
+    },
+    {
+      "id": "0204023b-186f-43c9-81b5-3257c60eb95c",
+      "userId": "75ec0fb6-5b13-4510-88f1-2112a84da51d",
+      "title": "小熊陪朵朵入睡",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "music",
+      "duration": "long",
+      "pageCount": 8,
+      "createdAt": "2026-09-02T16:18:25.599Z",
+      "approved": false,
+      "data": {
+        "id": "0204023b-186f-43c9-81b5-3257c60eb95c",
+        "title": "小熊陪朵朵入睡",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "music",
+          "duration": "long",
+          "characters": [
+            "小熊",
+            "小兔",
+            "小猫咪"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 100
+        },
+        "pages": [
+          {
+            "id": "p0-7144",
+            "text": "朵朵钻进深蓝的夜空，外面的世界变得软软的。",
+            "scene": "夜幕降临，孩子准备入睡",
+            "illustration": {
+              "seed": 295343,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p1-8452",
+            "text": "朵朵看见小熊，悄悄看着，心里甜甜的。",
+            "scene": "小熊来到孩子身边陪伴",
+            "illustration": {
+              "seed": 473810,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p2-4012",
+            "text": "朵朵和小兔一起数天上的小星星，一颗、两颗、三颗……",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 936273,
+              "palette": "night",
+              "elements": [
+                "cloud"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p3-3040",
+            "text": "小河悄悄看着，朵朵和小兔听得好开心。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 403403,
+              "palette": "dream",
+              "elements": [
+                "cloud",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p4-9395",
+            "text": "朵朵和小猫咪一起数天上的小星星，一颗、两颗、三颗……",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 796732,
+              "palette": "dream",
+              "elements": [
+                "hill"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p5-1057",
+            "text": "轻轻的云朵飘过来，朵朵和小兔坐上去轻轻摇。",
+            "scene": "孩子与角色一起做安静的小游戏",
+            "illustration": {
+              "seed": 279008,
+              "palette": "cozy",
+              "elements": [
+                "hill"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p6-4545",
+            "text": "小兔轻轻拍着朵朵的背，一下，又一下。",
+            "scene": "困意袭来，慢慢放松",
+            "illustration": {
+              "seed": 756241,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p7-1772",
+            "text": "小猫咪守在床边，朵朵的嘴角弯弯的。好梦，朵朵。",
+            "scene": "安然入睡，进入梦乡",
+            "illustration": {
+              "seed": 940753,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon",
+                "stars",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:18:25.599Z",
+        "approved": false
+      }
+    },
+    {
+      "id": "s_test_006",
+      "userId": "49910e81-cad1-4516-94dd-e4430d936b53",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T16:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_006",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。",
+            "scene": "夜景",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:00:00.000Z",
+        "approved": true,
+        "audioUrls": [
+          "/api/tts/file/1955a20dbed26e0d150018cb6910f21c.mp3"
+        ]
+      }
+    },
+    {
+      "id": "s_test_007",
+      "userId": "b8de8b96-c74c-439d-ad10-8471d82db55a",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T16:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_test_007",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。",
+            "scene": "夜景",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:00:00.000Z",
+        "approved": true,
+        "audioUrls": [
+          "/api/tts/file/1955a20dbed26e0d150018cb6910f21c.mp3"
+        ]
+      }
+    },
+    {
+      "id": "s_prod_001",
+      "userId": "5bee0d0c-0450-449e-8bcc-f0abf870bd35",
+      "title": "测试故事",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T16:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_prod_001",
+        "title": "测试故事",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。",
+            "scene": "夜景",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:00:00.000Z",
+        "approved": true,
+        "audioUrls": [
+          "/api/tts/file/1955a20dbed26e0d150018cb6910f21c.mp3"
+        ]
+      }
+    },
+    {
+      "id": "s_prod_002",
+      "userId": "df424274-bfea-4c3f-8795-2a164a04a56a",
+      "title": "测试故事2",
+      "childName": "朵朵",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-02T16:00:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_prod_002",
+        "title": "测试故事2",
+        "params": {
+          "childName": "朵朵",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "夜晚到了，朵朵揉了揉眼睛。",
+            "scene": "夜景",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-02T16:00:00.000Z",
+        "approved": true,
+        "audioUrls": [
+          "/api/tts/file/1955a20dbed26e0d150018cb6910f21c.mp3"
+        ]
+      }
+    },
+    {
+      "id": "s_en_001",
+      "userId": "6b00ec08-68a0-4d2c-b45c-771fc34b6f45",
+      "title": "English Bedtime",
+      "childName": "Lily",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "short",
+      "pageCount": 1,
+      "createdAt": "2026-09-03T00:30:00.000Z",
+      "approved": true,
+      "data": {
+        "id": "s_en_001",
+        "title": "English Bedtime",
+        "params": {
+          "childName": "Lily",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "short",
+          "characters": [
+            "小熊"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 70,
+          "lang": "en"
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "text": "The night came soft and quiet, and Lily rubbed sleepy eyes.",
+            "scene": "Night falls",
+            "illustration": {
+              "seed": 123,
+              "palette": "night",
+              "elements": [
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-03T00:30:00.000Z",
+        "approved": true,
+        "audioUrls": [
+          "/api/tts/file/8a65f5642ef0d7f88bc100480a0fa06b.mp3"
+        ]
+      }
+    },
+    {
+      "id": "d81d1d0a-a258-41bf-b02a-5571f1aa42d2",
+      "userId": "1d80aa40-2f9d-4655-a9ad-5188c8b56339",
+      "title": "宝宝的月亮小船",
+      "childName": "",
+      "tone": "gentle",
+      "bgSound": "rain",
+      "duration": "long",
+      "pageCount": 19,
+      "createdAt": "2026-09-03T07:35:16.510Z",
+      "approved": false,
+      "data": {
+        "id": "d81d1d0a-a258-41bf-b02a-5571f1aa42d2",
+        "title": "宝宝的月亮小船",
+        "params": {
+          "childName": "",
+          "tone": "gentle",
+          "bgSound": "rain",
+          "duration": "long",
+          "characters": [
+            "小狐狸",
+            "小鸭子"
+          ],
+          "pace": "slow",
+          "volume": 0.8,
+          "soothing": 100,
+          "lang": "zh",
+          "voice": "mommy"
+        },
+        "pages": [
+          {
+            "id": "p0-7405",
+            "text": "星星一颗接一颗亮起来，像有人在天边点起了小灯笼。宝宝钻进软软的被窝，心里却还醒着，像在等一件温柔的事发生。",
+            "scene": "夜幕降临，孩子准备入睡",
+            "illustration": {
+              "seed": 342462,
+              "palette": "night",
+              "elements": [
+                "moon",
+                "stars",
+                "window"
+              ],
+              "mood": "gentle",
+              "hasChild": false
+            }
+          },
+          {
+            "id": "p1-9656",
+            "text": "小鸭子从窗边飘来，带着一点点月光的气息。它歪着头看宝宝，眼里满是温柔：“今晚睡不着吧？那我们去做件温柔的事。”",
+            "scene": "角色拍拍枕头，温柔靠近",
+            "illustration": {
+              "seed": 133098,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p2-8819",
+            "text": "到了风婆婆的摇篮边，宝宝一眼就看见了想学会发光的小萤火虫妹妹——它正安安静静地待着，好像早就知道宝宝和小狐狸会来。",
+            "scene": "顺着指引看见孤单的小任务",
+            "illustration": {
+              "seed": 499080,
+              "palette": "night",
+              "elements": [
+                "cloud"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p3-6100",
+            "text": "小鸭子蹲下身，把温暖的手放在想学会发光的小萤火虫妹妹旁边。宝宝也学它的样子，轻轻吹了口气，光一点点亮了起来。",
+            "scene": "抱起小任务，风里哼歌",
+            "illustration": {
+              "seed": 410463,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p4-2145",
+            "text": "想学会发光的小萤火虫妹妹重新变得亮堂堂，把眼前的路照得柔柔的。小狐狸拉拉宝宝：“这一站好啦，我们接着去帮忙。”",
+            "scene": "小任务重新亮起，准备回家",
+            "illustration": {
+              "seed": 278246,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p5-5756",
+            "text": "月亮的银色山坡上，躲进云里不肯露脸的小月亮微微发着光。小鸭子悄悄说：“看，就是它。我们轻轻靠近，别吓着它。”",
+            "scene": "小任务微微发光，悄悄靠近",
+            "illustration": {
+              "seed": 335698,
+              "palette": "night",
+              "elements": [
+                "hill",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p6-8556",
+            "text": "宝宝把躲进云里不肯露脸的小月亮轻轻抱起来，小鸭子在旁边哼起歌。风把白天的烦恼都吹散了，只剩下这一刻的安心。",
+            "scene": "一起帮忙，光慢慢亮起",
+            "illustration": {
+              "seed": 116600,
+              "palette": "night",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p7-6903",
+            "text": "躲进云里不肯露脸的小月亮重新变得亮堂堂，把眼前的路照得柔柔的。小鸭子拉拉宝宝：“这一站好啦，我们接着去帮忙。”",
+            "scene": "小任务安好，地方更暖",
+            "illustration": {
+              "seed": 987684,
+              "palette": "dream",
+              "elements": [
+                "friend",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p8-9900",
+            "text": "安静的小河边上，一只不敢飘远的小云朵微微发着光。小鸭子悄悄说：“看，就是它。我们轻轻靠近，别吓着它。”",
+            "scene": "顺着指引看见孤单的小任务",
+            "illustration": {
+              "seed": 690300,
+              "palette": "dream",
+              "elements": [
+                "river",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p9-2275",
+            "text": "宝宝把一只不敢飘远的小云朵轻轻抱起来，小鸭子在旁边哼起歌。风把白天的烦恼都吹散了，只剩下这一刻的安心。",
+            "scene": "鼓励小任务，共同安顿",
+            "illustration": {
+              "seed": 720117,
+              "palette": "dream",
+              "elements": [
+                "friend",
+                "cloud"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p10-3912",
+            "text": "一只不敢飘远的小云朵重新变得亮堂堂，把眼前的路照得柔柔的。小狐狸拉拉宝宝：“这一站好啦，我们接着去帮忙。”",
+            "scene": "小任务重新亮起，准备回家",
+            "illustration": {
+              "seed": 902946,
+              "palette": "dream",
+              "elements": [
+                "friend",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p11-2684",
+            "text": "顺着小狐狸指的方向，宝宝在开满星星的花园看见了找不到回家路的小露珠。它有点孤单，却又努力朝着两人亮了亮。",
+            "scene": "小任务微微发光，悄悄靠近",
+            "illustration": {
+              "seed": 163400,
+              "palette": "dream",
+              "elements": [
+                "hill"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p12-4755",
+            "text": "宝宝把找不到回家路的小露珠轻轻抱起来，小狐狸在旁边哼起歌。风把白天的烦恼都吹散了，只剩下这一刻的安心。",
+            "scene": "抱起小任务，风里哼歌",
+            "illustration": {
+              "seed": 716902,
+              "palette": "dream",
+              "elements": [
+                "friend",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p13-6920",
+            "text": "找不到回家路的小露珠重新亮了起来，开心地冲他们挥挥手。宝宝牵起小鸭子的手，小声说：“走吧，我们还要去下一站呢。”",
+            "scene": "小任务重新亮起，准备回家",
+            "illustration": {
+              "seed": 824262,
+              "palette": "cozy",
+              "elements": [
+                "friend",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p14-2724",
+            "text": "星星铺成的小石桥上，那颗迷路的小星星微微发着光。小鸭子悄悄说：“看，就是它。我们轻轻靠近，别吓着它。”",
+            "scene": "到达目的地，发现小任务",
+            "illustration": {
+              "seed": 729128,
+              "palette": "cozy",
+              "elements": [
+                "cloud",
+                "friend"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p15-8418",
+            "text": "宝宝把那颗迷路的小星星轻轻抱起来，小狐狸在旁边哼起歌。风把白天的烦恼都吹散了，只剩下这一刻的安心。",
+            "scene": "鼓励小任务，共同安顿",
+            "illustration": {
+              "seed": 874949,
+              "palette": "cozy",
+              "elements": [
+                "friend",
+                "cloud"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p16-9377",
+            "text": "那颗迷路的小星星稳稳地好了，星星铺成的小石桥也变得更亮更暖。宝宝和小狐狸相视一笑——原来帮了别人，自己也会变得更困、更甜。",
+            "scene": "小任务安好，地方更暖",
+            "illustration": {
+              "seed": 386195,
+              "palette": "cozy",
+              "elements": [
+                "friend",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p17-1205",
+            "text": "宝宝的眼睛慢慢合上，长长的睫毛不再颤动。小狐狸守在一旁，像一棵安静的树，挡住了所有吵闹。",
+            "scene": "拉好被子，世界安静",
+            "illustration": {
+              "seed": 697858,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          },
+          {
+            "id": "p18-6561",
+            "text": "宝宝快要睡着啦，还偷偷笑了笑，像是梦到了好玩的事。晚安，宝宝。",
+            "scene": "安然入睡，梦里开花",
+            "illustration": {
+              "seed": 778375,
+              "palette": "cozy",
+              "elements": [
+                "bed",
+                "moon",
+                "stars"
+              ],
+              "mood": "gentle",
+              "hasChild": true
+            }
+          }
+        ],
+        "createdAt": "2026-09-03T07:35:16.510Z",
+        "approved": false,
+        "audioUrls": [
+          "/api/tts/file/0d6e820fd4785d989d1d7def2e670df3.mp3",
+          "/api/tts/file/e8ae3c108622ca322a31f7d374807520.mp3",
+          "/api/tts/file/8215ae0c67941124d2b09cb387df98db.mp3",
+          "/api/tts/file/3c4759d1f433c4c9b10e40c753bb64d2.mp3",
+          "/api/tts/file/792920ed5d7bd4cc5836e0537dbeca1f.mp3",
+          "/api/tts/file/076aebf8b25d1179e5577e0db4527ba5.mp3",
+          "/api/tts/file/fb0ee6a516175c5d4139739749db172b.mp3",
+          "/api/tts/file/483bfb1c79bed3321e6d8cf45910572e.mp3",
+          "/api/tts/file/6e9cec78a8171363ddc2366a087afc79.mp3",
+          "/api/tts/file/bab394295ffa4b9abeb0fa5138a9beef.mp3",
+          "/api/tts/file/aeab6367f950ed0b9389b3fc1f293b2d.mp3",
+          "/api/tts/file/cffac345eb0cd4c2255b1469ec7db342.mp3",
+          "/api/tts/file/c131b24f753fcf3c951e8ba983988546.mp3",
+          "/api/tts/file/c912cc10108fd782a5fc18a39da27ee3.mp3",
+          "/api/tts/file/bfb7c5703fc4870dbd3baecbd691d517.mp3",
+          "/api/tts/file/eb9475fe9fecfd450ff8dd698233242b.mp3",
+          "/api/tts/file/7deb0862f820dc44913f6493d05d88ba.mp3",
+          "/api/tts/file/cab87162fb4f5592825debcf0f99b67c.mp3",
+          "/api/tts/file/197f937da06f95de00b6e16e98d6e73a.mp3"
+        ]
+      }
+    }
+  ],
+  "preferences": {}
+}

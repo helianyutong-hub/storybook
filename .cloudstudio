@@ -1,0 +1,14 @@
+[[app]]
+name = "app"
+port = 5173
+cmd = '/workspace/start-frontend.sh'
+
+[[app]]
+name = "backend"
+port = 3000
+cmd = '/workspace/start-backend.sh'
+
+[[app]]
+name = "publish"
+port = 4000
+cmd = '/workspace/start-publish.sh'
