@@ -3,8 +3,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 启用 pnpm
-RUN corepack enable
+# 安装兼容 Node 20 的 pnpm 9（pnpm 10+ 依赖 node:sqlite，Node 20 不支持）
+RUN npm install -g pnpm@9.15.0
 
 # 先装依赖（利用镜像层缓存）
 COPY package.json pnpm-lock.yaml* .npmrc ./
