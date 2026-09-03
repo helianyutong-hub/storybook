@@ -36,6 +36,9 @@ export const createApp = (): Application => {
   app.use(env.API_PREFIX, systemRouter)
 
   // 领域模块路由
+  app.get(`${env.API_PREFIX}/health`, (_req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+  });
   app.use(`${env.API_PREFIX}/auth`, authRouter)
   app.use(`${env.API_PREFIX}/stories`, storiesRouter)
   app.use(`${env.API_PREFIX}/preferences`, preferencesRouter)

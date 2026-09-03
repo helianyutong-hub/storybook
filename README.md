@@ -56,8 +56,9 @@ cd frontend && pnpm install && pnpm dev
 当前 GitHub Pages 上的是「轻量版」：故事走本地模板、语音走浏览器 TTS。要获得
 「大模型写的完整剧情 + 云端自然语音」，需把后端也部署出去。
 
-### 1. 部署后端（任意支持 Docker 的 PaaS）
-- 推荐 Render / Railway / Fly.io：连接本仓库，使用仓库内 `backend/Dockerfile` 部署。
+### 1. 部署后端（一键式，推荐 Render）
+- 仓库根已放好 `render.yaml`（Render Blueprint）和 `railway.json`，连接本仓库即自动部署，无需手配。
+- 推荐：Render 用 GitHub 登录 → New → Blueprint → 连本仓库 → 创建。`rootDir=backend`、健康检查 `/api/health` 已设好。
 - 后端已就绪：`PORT` 读环境变量、CORS 默认 `*`，`pnpm build && pnpm start` 即可运行。
 - 部署后得到后端地址，如 `https://storybook-backend.onrender.com`。
 

@@ -1,0 +1,22 @@
+# Render Blueprint：在 Render 用 GitHub 登录后「New」→「Blueprint」连接本仓库，
+# 即自动按此文件部署后端（无需手动配置）。免费额度即可运行。
+services:
+  - type: web
+    name: storybook-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://helianyutong-hub.github.io
+      # 以下三项为可选：填了才有大模型完整剧情，留空则回退本地模板
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
