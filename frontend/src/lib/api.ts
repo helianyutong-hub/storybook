@@ -2,6 +2,40 @@
 import apiClient from './api-client';
 import { Story, StoryParams, UserPreferences, AuthUser, StorySummary, VoiceRole } from '@/types/story';
 
+/* ========== 音频 URL 本地缓存（localStorage）========== */
+const AUDIO_CACHE_PREFIX = 'sb_audio_';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 小时
+
+/** 从缓存读取某故事的音频 URLs */
+export function getCachedAudioUrls(storyId: string): (string | null)[] | null {
+  try {
+    const raw = localStorage.getItem(AUDIO_CACHE_PREFIX + storyId);
+    if (!raw) return null;
+    const { urls, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) {
+      localStorage.removeItem(AUDIO_CACHE_PREFIX + storyId);
+      return null;
+    }
+    return Array.isArray(urls) ? urls : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 写入音频 URL 缓存 */
+export function setCachedAudioUrls(storyId: string, urls: (string | null)[]): void {
+  try {
+    localStorage.setItem(AUDIO_CACHE_PREFIX + storyId, JSON.stringify({ urls, ts: Date.now() }));
+  } catch {
+    // localStorage 可能满了，静默失败
+  }
+}
+
+/** 清除某故事的音频缓存（重新生成文案时调用） */
+export function invalidateAudioCache(storyId: string): void {
+  localStorage.removeItem(AUDIO_CACHE_PREFIX + storyId);
+}
+
 export interface LoginResult {
   token: string;
   user: AuthUser;
@@ -57,7 +91,9 @@ export async function deleteStory(id: string): Promise<void> {
 export async function ensureAudioUrl(text: string, lang: 'zh' | 'en' = 'zh', voice?: VoiceRole): Promise<string | null> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
   try {
-    const { data } = await apiClient.post('/tts', { text, lang: locale, voice: voice ?? 'mommy' });
+    const { data } = await retryRequest(() =>
+      apiClient.post('/tts', { text, lang: locale, voice: voice ?? 'mommy' })
+    );
     return data?.url ?? null;
   } catch {
     return null;
@@ -73,12 +109,37 @@ export interface AudioProgress {
 /** 让后端为若干页文本启动一次语音生成任务（后端异步执行，返回任务 id） */
 async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en', voice?: VoiceRole): Promise<string> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
-  const { data } = await apiClient.post('/tts/story', {
-    pages: texts.map((text) => ({ text })),
-    lang: locale,
-    voice: voice ?? 'mommy',
-  });
+  const { data } = await retryRequest(() =>
+    apiClient.post('/tts/story', {
+      pages: texts.map((text) => ({ text })),
+      lang: locale,
+      voice: voice ?? 'mommy',
+    })
+  );
   return data?.jobId;
+}
+
+/**
+ * 带重试的请求封装——处理 Render 免费层冷启动（休眠后首次请求可能返回 405/502/503）。
+ * 最多重试 3 次，间隔递增（2s → 4s → 8s）。
+ */
+async function retryRequest<T>(fn: () => Promise<{ data: T }>, maxRetries = 3): Promise<{ data: T }> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      // 仅对服务端错误和 405 重试（4xx 客户端错误不重试，除了 405）
+      if (attempt < maxRetries && (!status || status >= 500 || status === 405)) {
+        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+        continue;
+      }
+      throw lastError;
+    }
+  }
+  throw lastError;
 }
 
 /** 轮询生成任务直到结束，期间回调进度；返回每页音频 URL（失败的页为 null） */
@@ -88,10 +149,14 @@ async function waitStoryAudioJob(
 ): Promise<(string | null)[]> {
   const maxAttempts = 300; // 约 6 分钟上限，覆盖弱网场景
   for (let i = 0; i < maxAttempts; i++) {
-    const { data } = await apiClient.get(`/tts/story/${jobId}`);
-    onProgress?.({ done: Number(data?.done ?? 0), total: Number(data?.total ?? 0) });
-    if (data?.status === 'done') {
-      return Array.isArray(data?.urls) ? data.urls : [];
+    try {
+      const { data } = await apiClient.get(`/tts/story/${jobId}`);
+      onProgress?.({ done: Number(data?.done ?? 0), total: Number(data?.total ?? 0) });
+      if (data?.status === 'done') {
+        return Array.isArray(data?.urls) ? data.urls : [];
+      }
+    } catch {
+      // 轮询时单次失败不中断，等下次重试
     }
     await new Promise((r) => setTimeout(r, 1200));
   }
@@ -100,8 +165,10 @@ async function waitStoryAudioJob(
 
 /**
  * 确保故事每一页都有云端语音：
- * 一次请求让后端把全部缺失的页都生成，若仍有失败页则自动补生成（最多 3 轮），
- * 避免"生成一半留一半"。返回的数组长度等于页数，失败的页为 null。
+ * 1. 先从 localStorage 缓存读取（秒开）
+ * 2. 缓存缺失时才请求后端
+ * 3. 生成结果自动写入缓存
+ * 返回的数组长度等于页数，失败的页为 null。
  */
 export async function ensureStoryAudioUrls(
   story: Story,
@@ -110,21 +177,35 @@ export async function ensureStoryAudioUrls(
   const lang: 'zh' | 'en' = story.params.lang === 'en' ? 'en' : 'zh';
   const total = story.pages.length;
 
-  // 先把已有记录对齐到当前页数
+  // 1. 先从缓存读取（可能上次已经生成过了）
+  const cached = getCachedAudioUrls(story.id);
   const urls: (string | null)[] = new Array(total).fill(null);
-  const existing = story.audioUrls ?? [];
-  for (let i = 0; i < Math.min(existing.length, total); i++) {
-    urls[i] = existing[i] ?? null;
+  if (cached && cached.length >= total) {
+    for (let i = 0; i < total; i++) urls[i] = cached[i] ?? null;
+    // 检查是否全部有值，如果是就直接返回（秒开）
+    if (urls.every(Boolean)) {
+      onProgress?.({ done: total, total });
+      return urls;
+    }
+    // 部分有值：后续只补缺失的页
+  } else {
+    // 没有缓存：用 story 自带的 audioUrls 作为初始值
+    const existing = story.audioUrls ?? [];
+    for (let i = 0; i < Math.min(existing.length, total); i++) {
+      urls[i] = existing[i] ?? null;
+    }
   }
 
-  // 最多 3 轮：每轮只为仍然缺失的页发起任务，已生成的页由后端缓存直接命中
-  for (let round = 0; round < 3; round++) {
-    const missing: number[] = [];
-    urls.forEach((u, i) => {
-      if (!u) missing.push(i);
-    });
-    if (missing.length === 0) break;
+  // 2. 计算还需要生成的页
+  const missing: number[] = [];
+  urls.forEach((u, i) => { if (!u) missing.push(i); });
+  if (missing.length === 0) {
+    onProgress?.({ done: total, total });
+    return urls;
+  }
 
+  // 3. 只为缺失的页发起后端请求（最多 1 轮，配合重试机制）
+  try {
     const jobId = await startStoryAudioJob(
       missing.map((i) => story.pages[i].text),
       lang,
@@ -136,8 +217,13 @@ export async function ensureStoryAudioUrls(
     missing.forEach((pageIndex, k) => {
       urls[pageIndex] = generated[k] ?? null;
     });
+  } catch (err) {
+    // 生成失败不抛错，返回部分结果
+    console.warn('部分语音生成失败:', err);
   }
 
+  // 4. 写入缓存（无论成功与否都缓存，避免重复请求失败的页）
+  setCachedAudioUrls(story.id, urls);
   return urls;
 }
 

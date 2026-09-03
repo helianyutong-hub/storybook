@@ -15,11 +15,10 @@ import {
 import { PACE_RATE, Story } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { getBgSound } from '@/lib/bgSound';
-import { fetchStory, ensureStoryAudioUrls } from '@/lib/api';
+import { fetchStory, ensureStoryAudioUrls, getCachedAudioUrls } from '@/lib/api';
 import { isTTSAvailable } from '@/lib/tts';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { StoryIllustration } from '@/lib/illustration';
 
 export default function Player() {
   const { id } = useParams();
@@ -38,8 +37,6 @@ export default function Player() {
   const audioGenerating = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioMode, setAudioMode] = useState<'none' | 'mp3' | 'speech'>('none');
-  /** 微信拦截了自动播放（非用户手势触发），需要用户轻点一下才能出声 */
-  const [needsTap, setNeedsTap] = useState(false);
   /** 每一页因加载失败而重新生成语音的次数，用于限制自动重试、避免死循环 */
   const reloadTried = useRef<Record<number, number>>({});
   /** 语音相关的错误提示 */
@@ -78,12 +75,15 @@ export default function Player() {
     if (story && !story.approved) nav(`/preview/${story.id}`, { replace: true });
   }, [story, nav]);
 
-  // 一次性生成整本故事的云端语音（force=true 用于手动重试，忽略轮次限制）
+  // ===== 核心优化：边播边生成模式 =====
+  // 1. 先从 localStorage 缓存读取（秒开）
+  // 2. 缓存有当前页音频 → 立即开始播放
+  // 3. 同时后台生成缺失页（不阻塞播放）
   const generateAllAudio = useCallback(
     async (force = false) => {
       if (!story) return null;
-      if (audioGenerating.current) return null;
-      if (!force && audioGenRound.current >= 3) return null;
+      if (audioGenerating.current && !force) return null;
+      if (!force && audioGenRound.current >= 2) return null; // 最多自动重试 2 轮
       audioGenerating.current = true;
       audioGenRound.current = force ? 1 : audioGenRound.current + 1;
       setAudioGen(true);
@@ -91,17 +91,20 @@ export default function Player() {
       setAudioProgress({ done: 0, total: story.pages.length });
       try {
         const urls = await ensureStoryAudioUrls(story, (p) => setAudioProgress(p));
-        // 检查是否全部生成成功
         const allOk = urls && urls.length === story.pages.length && urls.every(Boolean);
-        if (!allOk) {
-          setAudioError('部分页面语音生成失败，请检查网络后重试');
+        if (!allOk && !urls?.some(Boolean)) {
+          setAudioError('语音生成失败，请检查网络后重试');
         }
         setStory((s) => (s ? { ...s, audioUrls: urls } : s));
         updateDraft(story.id, { audioUrls: urls });
         return urls;
       } catch (err) {
         const msg = err instanceof Error ? err.message : '网络请求失败';
-        setAudioError(`语音生成失败：${msg}，请检查网络连接`);
+        if (msg.includes('405')) {
+          setAudioError('语音服务正在启动中，请稍后再试');
+        } else {
+          setAudioError(`语音生成失败：${msg}`);
+        }
         return null;
       } finally {
         audioGenerating.current = false;
@@ -111,58 +114,41 @@ export default function Player() {
     [story, updateDraft],
   );
 
-  // 进入播放页后，只要还有页面没有语音，就把整本一次性生成完；
-  // 生成完成后（或本就就绪）自动开始播放——满足需求 2：无需先去预览试听也能出声
+  // 进入播放页：缓存优先 → 有音频立即播，没有则后台生成
   useEffect(() => {
     if (!story) return;
-    const ready =
-      story.audioUrls &&
-      story.audioUrls.length === story.pages.length &&
-      story.audioUrls.every(Boolean);
-    if (ready) {
-      setPlaying(true);
-      return;
-    }
-    // 有缺失的页：启动云端生成，成功后再播放
-    void generateAllAudio().then((urls) => {
-      if (urls && urls.every(Boolean)) {
+
+    // 第一步：从 localStorage 缓存读取（可能 Preview 页已经预生成好了）
+    const cached = getCachedAudioUrls(story.id);
+    if (cached && cached.length >= story.pages.length) {
+      // 缓存命中：直接用缓存的 URLs，立即开始播放
+      const allReady = cached.every(Boolean);
+      updateDraft(story.id, { audioUrls: cached });
+      setStory((s) => (s ? { ...s, audioUrls: cached } : s));
+      if (allReady || cached[0]) {
+        // 第一页有音频就可以开始了
         setPlaying(true);
-      } else {
-        // 生成不完全：在有音频的页范围内仍可播放，或提示用户
-        const hasSome = urls?.some(Boolean);
-        if (hasSome) {
-          setPlaying(true);
-        } else {
-          // 完全没有音频且是微信环境：不自动播放，提示用户
-          if (isWeChat) {
-            setAudioError('无法加载语音，请返回预览页检查网络连接');
-          }
-        }
+        return;
+      }
+      // 缓存部分命中：开始播 + 后台补剩余
+      if (cached.some(Boolean)) setPlaying(true);
+    }
+
+    // 第二步：缓存没命中或部分缺失，后台生成（不阻塞 UI）
+    void generateAllAudio().then((urls) => {
+      if (!urls) return;
+      // 只要第一页有音频就开始播放
+      if (urls[0]) {
+        setPlaying(true);
+      } else if (urls.some(Boolean)) {
+        // 第一页没有但其他页有，也尝试播放（会跳到有音频的页）
+        setPlaying(true);
       }
     });
-  }, [story, generateAllAudio, isWeChat]);
+  }, [story]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 当前页是否有服务端音频（提前声明，供下方解锁监听依赖使用）
   const currentAudioUrl = story?.audioUrls?.[page] || null;
-
-  // 微信等内置浏览器会拦截「非用户手势触发」的自动播放。
-  // 注册一次性全局监听：用户轻触屏幕任意位置即解锁当前页音频（需求 2）。
-  useEffect(() => {
-    const unlock = () => {
-      const a = audioRef.current;
-      if (a && currentAudioUrl && a.paused) {
-        a.play()
-          .then(() => setNeedsTap(false))
-          .catch(() => {});
-      }
-    };
-    document.addEventListener('touchstart', unlock, { once: true });
-    document.addEventListener('click', unlock, { once: true });
-    return () => {
-      document.removeEventListener('touchstart', unlock);
-      document.removeEventListener('click', unlock);
-    };
-  }, [currentAudioUrl]);
 
   const last = story ? story.pages.length - 1 : 0;
 
@@ -196,16 +182,11 @@ export default function Player() {
         audio.load();
         audio
           .play()
-          .then(() => setNeedsTap(false))
+          .then(() => {})
           .catch(() => {
-            // 微信会拦截"非用户手势触发"的自动播放，此时提示用户轻点继续
-            setNeedsTap(true);
+            /* 微信可能拦截自动播放，用户可点击中间播放按钮手动触发 */
           });
-        audio.oncanplay = () => {
-          if (!cancelled && playing && audio.paused) {
-            audio.play().then(() => setNeedsTap(false)).catch(() => setNeedsTap(true));
-          }
-        };
+        audio.oncanplay = undefined;
         const onEnd = () => {
           if (cancelled) return;
           if (page < last) {
@@ -227,7 +208,6 @@ export default function Player() {
           }
           const tries = reloadTried.current[page] ?? 0;
           if (tries >= 2) {
-            setNeedsTap(true);
             return;
           }
           reloadTried.current[page] = tries + 1;
@@ -240,21 +220,37 @@ export default function Player() {
         };
       }
     } else {
-      // 没有服务端语音（纯静态部署 / 后端不可达）：优先用浏览器原生语音，
-      // 这样在 Chrome 等普通浏览器里打开也能直接出声；微信内置浏览器不支持时再提示。
-      if (isTTSAvailable()) {
-        setAudioMode('speech');
-        playSpeech();
-        return;
-      }
-      // 浏览器也不支持语音：尝试补生成服务端语音（配置后端后生效），否则停止。
-      setAudioMode('none');
-      void generateAllAudio(true).then((urls) => {
+      // 当前页还没有音频（可能还在后台生成中）
+      // 策略：等 2 秒再检查一次（边播边生成模式下，后台可能刚生成完）
+      // 如果生成已完成且仍无音频，跳到下一页
+      const retryTimer = setTimeout(() => {
         if (cancelled) return;
-        if (urls?.[page]) return;
-        setPlaying(false);
-      });
-      return;
+        // 重新检查当前 story 状态（后台可能已更新 audioUrls）
+        const updatedUrl = story.audioUrls?.[page] || getCachedAudioUrls(story.id)?.[page];
+        if (updatedUrl) {
+          // 音频已经好了，触发重新播放（通过切换 page 触发 effect 重新执行）
+          setPage(page); // 同一个值也会触发 re-render + effect 重跑
+          return;
+        }
+        // 还是没有：尝试找下一页有音频的
+        if (page < last) {
+          setPage((p) => Math.min(last, p + 1));
+        } else {
+          // 最后一页都没音频，停止播放
+          if (!story.audioUrls?.some(Boolean)) {
+            setAudioError('语音生成失败，请检查网络后点击重试');
+          }
+          setFinished(true);
+          setPlaying(false);
+        }
+      }, 2000);
+
+      // 标记为等待中
+      setAudioMode('none');
+
+      return () => {
+        clearTimeout(retryTimer);
+      };
     }
 
     function playSpeech() {
@@ -318,7 +314,7 @@ export default function Player() {
     }
   };
 
-  // 播放/暂停按钮：在用户手势内同步调用 play()，微信要求必须由手势触发
+  // 播放/暂停按钮
   const togglePlay = () => {
     bg?.resume();
     setPlaying((p) => {
@@ -327,20 +323,11 @@ export default function Player() {
         audioRef.current.src = currentAudioUrl;
         audioRef.current.volume = volume;
         audioRef.current.play().catch(() => {
-          /* 后续 effect 会兜底 */
+          /* 微信可能拦截，用户可再次点击播放按钮 */
         });
       }
       return next;
     });
-  };
-
-  // 微信拦截自动播放时，由用户轻点一下，在手势内继续播放（微信一定能出声）
-  const resumeByTap = () => {
-    const audio = audioRef.current;
-    if (!audio || !currentAudioUrl) return;
-    audio.src = currentAudioUrl;
-    audio.volume = volume;
-    audio.play().then(() => setNeedsTap(false)).catch(() => {});
   };
 
   if (!story) {
@@ -370,11 +357,9 @@ export default function Player() {
       {/* 隐藏音频元素，用于服务端 TTS 播放（微信兼容） */}
       <audio ref={audioRef} preload="none" className="hidden" playsInline />
 
-      {/* 背景插画 */}
-      <div className="absolute inset-0">
-        <StoryIllustration spec={story.pages[page].illustration} className="size-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
-      </div>
+      {/* 固定渐变背景（替代动态插画，提升加载速度） */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#1a1040] via-[#2d1b69] to-[#0d0a26]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
 
       {/* 退出 */}
       <button
@@ -418,8 +403,8 @@ export default function Player() {
           </p>
         )}
 
-        {/* 音频还在加载/生成中：显示等待提示（不与 needsTap 同时出现） */}
-        {playing && audioMode === 'none' && !audioGen && !audioError && !needsTap && (
+        {/* 音频还在加载/生成中：显示等待提示 */}
+        {playing && audioMode === 'none' && !audioGen && !audioError && (
           <div className="mt-6 flex max-w-sm flex-col items-center gap-1.5 rounded-2xl bg-black/30 px-5 py-3 text-center backdrop-blur">
             <p className="flex items-center gap-2 text-sm font-semibold text-white/80">
               <Loader2 className="size-4 animate-spin" /> 语音准备中…
@@ -430,29 +415,7 @@ export default function Player() {
           </div>
         )}
 
-        {needsTap && !audioGen && audioMode !== 'none' && (
-          <div className="mt-5 animate-pulse rounded-full bg-primary/25 px-6 py-3 backdrop-blur">
-            <p className="text-sm font-semibold text-white">
-              轻触屏幕任意位置，开始播放
-            </p>
-          </div>
-        )}
       </div>
-
-      {/* 微信等浏览器拦截自动播放时，吸底显示「点击开始播放」按钮（移动端友好） */}
-      {needsTap && !audioGen && audioMode !== 'none' && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-50 flex cursor-pointer items-center justify-center bg-primary px-6 py-4 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] active:bg-primary/90"
-          onClick={resumeByTap}
-          role="button"
-          tabIndex={0}
-        >
-          <p className="flex items-center gap-2 text-base font-bold text-white">
-            <Volume2 className="size-6 animate-bounce" />
-            点击这里开始播放 ▶
-          </p>
-        </div>
-      )}
 
       {/* 控制条 */}
       <div className="relative z-10 mx-auto mb-6 w-full max-w-xl px-5">
@@ -512,13 +475,11 @@ export default function Player() {
             <Button
               size="icon-lg"
               className="size-16 rounded-full bg-primary text-primary-foreground shadow-xl"
-              onClick={needsTap ? resumeByTap : togglePlay}
+              onClick={togglePlay}
               disabled={audioGen}
             >
               {audioGen ? (
                 <Loader2 className="size-7 animate-spin" />
-              ) : needsTap ? (
-                <Volume2 className="size-7" />
               ) : playing ? (
                 <Pause className="size-7" />
               ) : (

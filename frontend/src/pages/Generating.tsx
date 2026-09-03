@@ -4,7 +4,7 @@ import { Moon, PenLine, ImageIcon, AudioLines, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { StoryParams } from '@/types/story';
 import { generateStory, buildStoryFromLLM } from '@/lib/storyEngine';
-import { generateStoryViaLLM } from '@/lib/api';
+import { generateStoryViaLLM, ensureStoryAudioUrls } from '@/lib/api';
 import { useApp } from '@/store/AppStore';
 
 const STEPS = [
@@ -42,7 +42,20 @@ export default function Generating() {
       done = true;
       setStep(3);
       setDraft(story);
-      setTimeout(() => nav(`/preview/${story.id}`, { replace: true }), 500);
+      // ===== 关键优化：故事生成完毕后立即开始预生成所有页语音 =====
+      // 用户看到「合成轻柔语音 ✓ 完成」动画的同时，音频已经在后台跑了
+      // 等用户进入预览/播放页时，音频可能已经好了（localStorage 缓存）
+      // 不 await、不阻塞导航，失败也静默忽略（Preview/Player 页会兜底重试）
+      ensureStoryAudioUrls(story)
+        .then((urls) => {
+          if (urls?.some(Boolean)) {
+            // 更新 draft 中的 audioUrls（Preview/Player 会自动读取）
+            // 用 setTimeout 避免在 React 渲染周期内 setState
+            setTimeout(() => setDraft({ ...story, audioUrls: urls }), 0);
+          }
+        })
+        .catch(() => {});
+      setTimeout(() => nav(`/preview/${story.id}`, { replace: true }), 800);
     };
 
     // 优先用大模型生成完整情节（需求 1 + 需求 4 动态页数）；
