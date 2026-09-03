@@ -8,8 +8,17 @@ export interface LoginResult {
 }
 
 export async function login(method: 'phone' | 'wechat', identifier: string, name?: string): Promise<LoginResult> {
-  const { data } = await apiClient.post('/auth/login', { method, identifier, name });
-  return data;
+  try {
+    const { data } = await apiClient.post('/auth/login', { method, identifier, name });
+    return data;
+  } catch {
+    // 后端不可用时（纯静态部署 / 本地无后端），走本地模拟登录
+    const displayName = name ?? (method === 'phone' ? `用户${identifier.slice(-4)}` : identifier);
+    return {
+      token: `local_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      user: { id: `local_${identifier}`, name: displayName, method },
+    };
+  }
 }
 
 export async function fetchMe(): Promise<AuthUser | null> {

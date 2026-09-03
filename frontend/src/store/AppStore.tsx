@@ -53,13 +53,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(PREFS_KEY, JSON.stringify(lastParams));
   }, [lastParams]);
 
-  // 启动时校验本地 token：若服务端不认识（常见于重新部署后数据重置），则自动退出登录
+  // 启动时校验本地 token：若服务端不认识（常见于重新部署后数据重置），则自动退出登录。
+  // 注：纯静态部署无后端时 fetchMe 会失败，此时保留本地登录态不踢出。
   useEffect(() => {
     if (!auth) return;
     let alive = true;
     fetchMe().then((user) => {
       if (!alive) return;
-      if (!user) setAuth(null);
+      // 仅当后端明确返回"无效"时才退出；网络错误/无后端时不处理
+      if (user === null && auth.token && !auth.token.startsWith('local_')) {
+        setAuth(null);
+      }
     });
     return () => {
       alive = false;
