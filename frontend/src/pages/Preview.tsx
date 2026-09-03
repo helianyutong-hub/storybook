@@ -43,6 +43,8 @@ export default function Preview() {
   const [autoPlaying, setAutoPlaying] = useState(false);
   const autoPlayingRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /** 语音播放失败时的提示信息（null = 无错误） */
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
 
@@ -65,6 +67,13 @@ export default function Preview() {
     );
   }
 
+  /** 检测是否在微信内置浏览器中 */
+  const isWeChat = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('micromessenger');
+  }, []);
+
   const previewSpeak = async () => {
     if (speaking) {
       cancelSpeech();
@@ -72,6 +81,7 @@ export default function Preview() {
       setSpeaking(false);
       return;
     }
+    setAudioError(null);
     setSpeaking(true);
 
     // 若已有服务端音频，优先用 <audio> 播放（微信兼容）；否则按需生成
@@ -79,31 +89,78 @@ export default function Preview() {
     const lang: 'zh' | 'en' = story.params.lang === 'en' ? 'en' : 'zh';
     if (!audioUrl) {
       setPreparing(true);
-      audioUrl = await ensureAudioUrl(story.pages[page].text, lang, story.params.voice).finally(() =>
-        setPreparing(false),
-      );
-      if (audioUrl) {
-        const urls = [...(story.audioUrls ?? [])];
-        urls[page] = audioUrl;
-        updateDraft(story.id, { audioUrls: urls });
+      try {
+        audioUrl = await ensureAudioUrl(story.pages[page].text, lang, story.params.voice);
+        if (audioUrl) {
+          const urls = [...(story.audioUrls ?? [])];
+          urls[page] = audioUrl;
+          updateDraft(story.id, { audioUrls: urls });
+        }
+      } catch {
+        audioUrl = null;
+      } finally {
+        setPreparing(false);
       }
     }
     if (audioUrl && audioRef.current) {
       const audio = audioRef.current;
       audio.volume = story.params.volume;
       audio.src = audioUrl;
-      audio.onended = () => setSpeaking(false);
+      const done = () => setSpeaking(false);
+      audio.onended = done;
       audio.onerror = () => {
         setSpeaking(false);
+        setAudioError('音频播放失败，请检查网络后重试');
       };
       try {
         await audio.play();
-      } catch {
+        // play() 成功但用户可能听不到（微信音量/静音），保持 speaking 状态直到 onended
+        return;
+      } catch (e) {
+        // 浏览器拦截自动播放（非用户手势上下文）
         setSpeaking(false);
+        setAudioError('播放被浏览器拦截，请再点一次试听');
+        return;
       }
+    }
+
+    // 没有服务端音频：尝试浏览器语音
+    if (!isTTSAvailable()) {
+      setSpeaking(false);
+      setAudioError('当前浏览器不支持语音朗读，需要连接后端服务才能播放语音');
+      return;
+    }
+    // 微信内置浏览器的 speechSynthesis 是空壳，不发声，直接提示
+    if (isWeChat) {
+      setSpeaking(false);
+      setAudioError('微信浏览器无法使用浏览器语音，正在尝试连接云端语音…');
+      // 再试一次强制生成云端语音
+      setPreparing(true);
+      try {
+        audioUrl = await ensureAudioUrl(story.pages[page].text, lang, story.params.voice);
+        if (audioUrl && audioRef.current) {
+          const urls = [...(story.audioUrls ?? [])];
+          urls[page] = audioUrl;
+          updateDraft(story.id, { audioUrls: urls });
+          const audio = audioRef.current;
+          audio.volume = story.params.volume;
+          audio.src = audioUrl;
+          audio.onended = () => setSpeaking(false);
+          audio.onerror = () => { setSpeaking(false); setAudioError('云端语音播放失败'); };
+          setSpeaking(true);
+          await audio.play().catch(() => { setSpeaking(false); setAudioError('播放被拦截，请再点一次'); });
+          return;
+        }
+      } catch {
+        // ignore
+      } finally {
+        setPreparing(false);
+      }
+      setAudioError('无法连接语音服务，请确认网络正常或稍后再试');
       return;
     }
 
+    // 非微信普通浏览器：用 Web Speech API 播放
     await speak(story.pages[page].text, {
       rate: PACE_RATE[story.params.pace],
       volume: story.params.volume,
@@ -134,6 +191,7 @@ export default function Preview() {
   const stopAll = () => {
     autoPlayingRef.current = false;
     setAutoPlaying(false);
+    setAudioError(null);
     cancelSpeech();
     audioRef.current?.pause();
   };
@@ -143,6 +201,7 @@ export default function Preview() {
       stopAll();
       return;
     }
+    setAudioError(null);
     autoPlayingRef.current = true;
     setAutoPlaying(true);
     setSpeaking(false);
@@ -159,11 +218,15 @@ export default function Preview() {
       const text = story.pages[i].text;
       let url = story.audioUrls?.[i];
       if (!url) {
-        url = await ensureAudioUrl(text, lang, story.params.voice);
-        if (url) {
-          const urls = [...(story.audioUrls ?? [])];
-          urls[i] = url;
-          updateDraft(story.id, { audioUrls: urls });
+        try {
+          url = await ensureAudioUrl(text, lang, story.params.voice);
+          if (url) {
+            const urls = [...(story.audioUrls ?? [])];
+            urls[i] = url;
+            updateDraft(story.id, { audioUrls: urls });
+          }
+        } catch {
+          url = null;
         }
       }
 
@@ -176,8 +239,11 @@ export default function Preview() {
           audio.onerror = () => resolve();
           audio.play().then(() => {}).catch(() => resolve());
         });
+      } else if (isWeChat || !isTTSAvailable()) {
+        // 微信或无语音能力：跳过这一页的语音，但不中断整个播放
+        // 如果全部页都没有语音，结束后给个提示
+        continue;
       } else {
-        // 微信/不支持服务端音频时回退浏览器原生语音
         await new Promise<void>((resolve) => {
           speak(text, {
             rate: PACE_RATE[story.params.pace],
@@ -191,6 +257,11 @@ export default function Preview() {
     }
     autoPlayingRef.current = false;
     setAutoPlaying(false);
+    // 播放完毕后检查是否一页都没成功播放
+    const hasAnyAudio = story.audioUrls?.some(Boolean) ?? false;
+    if (!hasAnyAudio && !isTTSAvailable()) {
+      setAudioError('没有可用的语音服务，请检查网络连接或稍后重试');
+    }
   };
 
   const toggleBg = () => {
@@ -363,6 +434,11 @@ export default function Preview() {
                 试听与播放的语音由云端逐页生成并缓存，需要保持网络连接；
                 某一页首次生成可能需要等待几秒，生成后即可重复播放。
               </p>
+              {audioError && (
+                <p className="mt-1.5 rounded-lg bg-amber-500/15 px-3 py-2 text-xs font-medium text-amber-300">
+                  {audioError}
+                </p>
+              )}
               {!isTTSAvailable() && (
                 <p className="text-xs text-muted-foreground">
                   当前浏览器不支持语音朗读，请在手机或电脑的 Chrome / Safari 中打开以获得朗读体验。

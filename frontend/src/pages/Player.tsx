@@ -42,6 +42,13 @@ export default function Player() {
   const [needsTap, setNeedsTap] = useState(false);
   /** 每一页因加载失败而重新生成语音的次数，用于限制自动重试、避免死循环 */
   const reloadTried = useRef<Record<number, number>>({});
+  /** 语音相关的错误提示 */
+  const [audioError, setAudioError] = useState<string | null>(null);
+  /** 是否在微信内置浏览器中 */
+  const isWeChat = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return /micromessenger/i.test(navigator.userAgent);
+  }, []);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
 
@@ -80,13 +87,21 @@ export default function Player() {
       audioGenerating.current = true;
       audioGenRound.current = force ? 1 : audioGenRound.current + 1;
       setAudioGen(true);
+      setAudioError(null);
       setAudioProgress({ done: 0, total: story.pages.length });
       try {
         const urls = await ensureStoryAudioUrls(story, (p) => setAudioProgress(p));
+        // 检查是否全部生成成功
+        const allOk = urls && urls.length === story.pages.length && urls.every(Boolean);
+        if (!allOk) {
+          setAudioError('部分页面语音生成失败，请检查网络后重试');
+        }
         setStory((s) => (s ? { ...s, audioUrls: urls } : s));
         updateDraft(story.id, { audioUrls: urls });
         return urls;
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '网络请求失败';
+        setAudioError(`语音生成失败：${msg}，请检查网络连接`);
         return null;
       } finally {
         audioGenerating.current = false;
@@ -108,8 +123,24 @@ export default function Player() {
       setPlaying(true);
       return;
     }
-    void generateAllAudio().then(() => setPlaying(true));
-  }, [story, generateAllAudio]);
+    // 有缺失的页：启动云端生成，成功后再播放
+    void generateAllAudio().then((urls) => {
+      if (urls && urls.every(Boolean)) {
+        setPlaying(true);
+      } else {
+        // 生成不完全：在有音频的页范围内仍可播放，或提示用户
+        const hasSome = urls?.some(Boolean);
+        if (hasSome) {
+          setPlaying(true);
+        } else {
+          // 完全没有音频且是微信环境：不自动播放，提示用户
+          if (isWeChat) {
+            setAudioError('无法加载语音，请返回预览页检查网络连接');
+          }
+        }
+      }
+    });
+  }, [story, generateAllAudio, isWeChat]);
 
   // 当前页是否有服务端音频（提前声明，供下方解锁监听依赖使用）
   const currentAudioUrl = story?.audioUrls?.[page] || null;
@@ -377,6 +408,12 @@ export default function Player() {
               一次性生成完后会自动开始播放。
             </p>
           </div>
+        )}
+
+        {audioError && !audioGen && (
+          <p className="mt-5 max-w-sm animate-pulse rounded-2xl bg-amber-500/20 px-5 py-3 text-center text-sm font-semibold text-amber-300 backdrop-blur">
+            {audioError}
+          </p>
         )}
 
         {needsTap && !audioGen && (
