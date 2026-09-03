@@ -1,0 +1,19 @@
+# 故事书后端 - 阿里云部署
+# 用法：在 backend/ 目录下执行  docker compose up -d --build
+services:
+  backend:
+    build: .
+    container_name: storybook-backend
+    restart: unless-stopped
+    # 只暴露给本机，由宿主机 nginx 反代出去（不直接对外）
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_PREFIX=/api
+      - CORS_ORIGIN=*
+      - LOG_LEVEL=info
+    volumes:
+      # 持久化故事/用户数据（后端用本地 JSON 文件存储）
+      - ./data:/app/data

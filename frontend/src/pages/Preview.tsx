@@ -86,7 +86,7 @@ export default function Preview() {
     // 用 fetch 而不是 axios，避免错误弹窗/拦截器干扰
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000); // 5 秒超时
-    fetch(`${import.meta.env.VITE_API_BASE || ''}/tts`, {
+    fetch(`${import.meta.env.VITE_API_BASE || ''}/api/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: 'hi', lang: 'zh-CN', voice: 'mommy' }),

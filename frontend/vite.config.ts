@@ -6,8 +6,8 @@ import process from "process"
 
 // https://vite.dev/config/
 export default defineConfig({
-  // GitHub Pages 项目站点部署在 /storybook/ 子路径下
-  base: '/storybook/',
+  // 阿里云部署在域名根路径（前后端同域名）；如需保留子路径改回 '/storybook/'
+  base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
