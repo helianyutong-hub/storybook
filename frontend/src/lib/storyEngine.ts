@@ -5,7 +5,7 @@
 
 import { Rng } from './prng';
 import {
-  DURATION_PAGES,
+  DURATION_EPISODES,
   Story,
   StoryPage,
   StoryParams,
@@ -49,6 +49,13 @@ const QUEST_POOL: Record<StoryLang, string[]> = {
     '一只不敢飘远的小云朵',
     '一朵忘了怎么笑的小花',
     '走丢的小萤火虫',
+    '被夜风吹散的小蒲公英',
+    '躲进云里不肯露脸的小月亮',
+    '找不到回家路的小露珠',
+    '一只怎么也睡不着的小猫头鹰',
+    '忘了歌词的小夜莺',
+    '想学会发光的小萤火虫妹妹',
+    '数不清自己花瓣的小花苞',
   ],
   en: [
     'a little lost star',
@@ -56,22 +63,61 @@ const QUEST_POOL: Record<StoryLang, string[]> = {
     'a tiny cloud too shy to drift',
     'a small flower that forgot how to smile',
     'a firefly that wandered off',
+    'a dandelion seed blown away by the night wind',
+    'a shy little moon hiding in the clouds',
+    'a dewdrop that lost its way home',
+    'a little owl that just cannot sleep',
+    'a nightingale that forgot its song',
+    'a little firefly learning to glow',
+    'a small bud counting its petals',
   ],
 };
 
 // 冒险发生的地方
 const PLACE_POOL: Record<StoryLang, string[]> = {
-  zh: ['窗外的草地', '软软的云路', '安静的小河边', '开满星星的花园', '月亮的银色山坡'],
-  en: ['the grass outside the window', 'a soft road of clouds', 'a quiet little river', 'a garden full of stars', 'the moon’s silver hill'],
+  zh: [
+    '窗外的草地',
+    '软软的云路',
+    '安静的小河边',
+    '开满星星的花园',
+    '月亮的银色山坡',
+    '洒满月光的小树林',
+    '星星铺成的小石桥',
+    '风婆婆的摇篮边',
+  ],
+  en: [
+    'the grass outside the window',
+    'a soft road of clouds',
+    'a quiet little river',
+    'a garden full of stars',
+    'the moon’s silver hill',
+    'a little forest bathed in moonlight',
+    'a small stone bridge made of stars',
+    'the edge of the Wind Grandmother’s cradle',
+  ],
 };
 
 // 把地点文字映射到插画元素
 function placeElement(place: string): string {
   if (/河|溪|水|river/i.test(place)) return 'river';
   if (/云|cloud/i.test(place)) return 'cloud';
-  if (/山|坡|丘|hill|园|草|森|树|garden|grass/i.test(place)) return 'hill';
+  if (/山|坡|丘|hill|园|草|森|树|garden|grass|forest/i.test(place)) return 'hill';
   return 'cloud';
 }
+
+// 中间任务的收尾句：办完这一站，继续走向下一站（最后一个任务用 TEMPLATES 里的「回家睡觉」）
+const CONTINUE_RESOLVE: Record<StoryLang, string[]> = {
+  zh: [
+    '{quest}重新亮了起来，开心地冲他们挥挥手。{name}牵起{char}的手，小声说：“走吧，我们还要去下一站呢。”',
+    '事情办妥啦，{quest}朝他们弯了弯腰。{name}心里暖暖的，和{char}一起，踩着星光继续往前走。',
+    '{quest}重新变得亮堂堂，把眼前的路照得柔柔的。{char}拉拉{name}：“这一站好啦，我们接着去帮忙。”',
+  ],
+  en: [
+    '{quest} lit up again and waved at them happily. {name} held {char}’s hand and whispered, "Come, we still have the next stop."',
+    'All done, {quest} bowed to them. {name} felt warm inside, and walked on over the starlight with {char}.',
+    '{quest} glowed brightly again, lighting the path ahead. {char} nudged {name}: "This one is done, let’s go help again."',
+  ],
+};
 
 // 双语模板：每个节拍提供多句、更有层次的叙事
 const TEMPLATES: Record<StoryLang, Record<Beat, { text: string[]; scene: string[] }>> = {
@@ -239,23 +285,26 @@ function fill(tpl: string, name: string, char?: string, quest?: string, place?: 
     .replace(/\{place\}/g, place ?? '安静的夜里');
 }
 
-// 根据总页数推导「有起承转合」的节拍序列（页数随情节伸缩）
-// 结构：开场(open) → 伙伴出现(meet) → 小冒险(setoff/discover/help/resolve) → 安静(calm) → 入睡(sleep)
-function deriveBeats(total: number): Beat[] {
-  const beats: Beat[] = ['open', 'meet'];
-  const journey = Math.max(0, total - 4); // open/meet/calm/sleep 占 4 页，其余是冒险
-  if (journey === 1) {
-    beats.push('resolve');
-  } else if (journey >= 2) {
-    beats.push('setoff');
-    if (journey >= 3) beats.push('discover');
-    const helps = journey - 2 - (journey >= 3 ? 1 : 0);
-    for (let i = 0; i < Math.max(0, helps); i++) beats.push('help');
-    beats.push('resolve');
-  }
-  beats.push('calm');
-  beats.push('sleep');
-  return beats;
+// 节拍序列的一步：冒险节拍带各自的「小任务/地点」，中间任务与最后任务的收尾不同
+interface BeatStep {
+  beat: Beat;
+  quest?: string;
+  place?: string;
+  isFinalResolve?: boolean;
+}
+
+// 根据若干「小任务」推导完整节拍序列（页数由任务数量自然决定，不写死上限）：
+// 开场(open) → 伙伴出现(meet) → 每个任务 discover/help/resolve → 安静(calm) → 入睡(sleep)
+function deriveSteps(episodes: { quest: string; place: string }[]): BeatStep[] {
+  const steps: BeatStep[] = [{ beat: 'open' }, { beat: 'meet' }];
+  episodes.forEach((ep, i) => {
+    const isFinal = i === episodes.length - 1;
+    steps.push({ beat: 'discover', quest: ep.quest, place: ep.place });
+    steps.push({ beat: 'help', quest: ep.quest, place: ep.place });
+    steps.push({ beat: 'resolve', quest: ep.quest, place: ep.place, isFinalResolve: isFinal });
+  });
+  steps.push({ beat: 'calm' }, { beat: 'sleep' });
+  return steps;
 }
 
 // 生成每一页的文本、场景与插画
@@ -267,6 +316,7 @@ function buildPage(
   p: StoryParams,
   quest: string,
   place: string,
+  isFinalResolve = true,
 ): { text: string; scene: string; illustration: IllustrationSpec } {
   const lang = p.lang;
   const t = TEMPLATES[lang];
@@ -282,7 +332,10 @@ function buildPage(
   const char = lang === 'en' ? CHAR_EN[picked] ?? 'a little friend' : picked;
   const tone = TONE_WORDS[p.tone];
 
-  let text = fill(rng.pick(beatTpl.text), name, char, quest, place);
+  // resolve 分两种：中间任务用「继续前进」，最后一个任务用「回家睡觉」
+  const textSource =
+    beat === 'resolve' && !isFinalResolve ? CONTINUE_RESOLVE[lang] : beatTpl.text;
+  let text = fill(rng.pick(textSource), name, char, quest, place);
   // 中文叙事里点缀基调形容词（英文模板已自带语气，不需替换）
   if (lang === 'zh' && beat === 'help' && text.includes('{adj}')) {
     text = text.replace(/\{adj\}/g, rng.pick(tone.adj));
@@ -333,17 +386,29 @@ export function generateStory(input: StoryParams, nonce = 0): Story {
     soothing: input.soothing ?? 70,
     tone: input.tone ?? 'gentle',
     lang: input.lang ?? 'zh',
+    voice: input.voice ?? 'mommy',
   };
-  const total = DURATION_PAGES[p.duration];
   const seedBase = `${p.childName}|${p.characters.join(',')}|${p.duration}|${p.tone}|${p.soothing}|${p.bgSound}|${p.lang}|${nonce}`;
   const rng = new Rng(seedBase);
 
-  const quest = rng.pick(QUEST_POOL[p.lang]);
-  const place = rng.pick(PLACE_POOL[p.lang]);
+  // 页数不再写死：由时长决定「小任务」数量，每个任务三幕，自然展开成完整故事
+  const episodeCount = DURATION_EPISODES[p.duration];
+  const quests = rng.sample(QUEST_POOL[p.lang], episodeCount);
+  const places = rng.sample(PLACE_POOL[p.lang], episodeCount);
+  const episodes = quests.map((q, i) => ({ quest: q, place: places[i] ?? places[0] }));
 
-  const beats = deriveBeats(total);
-  const pages: StoryPage[] = beats.map((beat, idx) => {
-    const { text, scene, illustration } = buildPage(rng, beat, idx, beats.length, p, quest, place);
+  const steps = deriveSteps(episodes);
+  const pages: StoryPage[] = steps.map((step, idx) => {
+    const { text, scene, illustration } = buildPage(
+      rng,
+      step.beat,
+      idx,
+      steps.length,
+      p,
+      step.quest ?? '',
+      step.place ?? '',
+      step.isFinalResolve ?? true,
+    );
     return {
       id: `p${idx}-${rng.int(1000, 9999)}`,
       text,
@@ -384,11 +449,24 @@ export function regenerateStoryText(story: Story): StoryPage[] {
       Math.random() * 1_000_000
     )}`
   );
-  const quest = rng.pick(QUEST_POOL[p.lang]);
-  const place = rng.pick(PLACE_POOL[p.lang]);
-  const beats = deriveBeats(story.pages.length);
+  // 由当前页数反推任务数，保证重生成后页数不变
+  const episodeCount = Math.max(1, Math.round((story.pages.length - 4) / 3));
+  const quests = rng.sample(QUEST_POOL[p.lang], episodeCount);
+  const places = rng.sample(PLACE_POOL[p.lang], episodeCount);
+  const episodes = quests.map((q, i) => ({ quest: q, place: places[i] ?? places[0] }));
+  const steps = deriveSteps(episodes);
   return story.pages.map((pg, idx) => {
-    const { text, scene } = buildPage(rng, beats[idx], idx, story.pages.length, p, quest, place);
+    const step = steps[idx] ?? steps[steps.length - 1];
+    const { text, scene } = buildPage(
+      rng,
+      step.beat,
+      idx,
+      story.pages.length,
+      p,
+      step.quest ?? '',
+      step.place ?? '',
+      step.isFinalResolve ?? true,
+    );
     return { ...pg, text, scene };
   });
 }
@@ -412,6 +490,7 @@ export function buildStoryFromLLM(
     soothing: input.soothing ?? 70,
     tone: input.tone ?? 'gentle',
     lang: input.lang ?? 'zh',
+    voice: input.voice ?? 'mommy',
   };
   const total = raw.pages.length;
   const rng = new Rng(`llm|${p.childName}|${p.characters.join(',')}|${p.lang}|${Date.now()}|${Math.floor(Math.random() * 1_000_000)}`);

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import crypto from 'crypto';
-import { audioFilePath, ensureAudioWithRetry, cachedAudioPath } from '../lib/tts';
+import { audioFilePath, ensureAudioWithRetry, cachedAudioPath, normalizeVoice } from '../lib/tts';
 
 export const ttsRouter: Router = Router();
 
@@ -27,14 +27,15 @@ function rememberJob(id: string, job: TtsJob) {
 }
 
 // 按需生成并返回音频 URL（单页）
-// body: { text: string, lang?: string }
+// body: { text: string, lang?: string, voice?: 'daddy'|'mommy'|'grandpa'|'grandma' }
 ttsRouter.post('/', async (req, res) => {
   const text = typeof req.body?.text === 'string' ? req.body.text : '';
   const lang = typeof req.body?.lang === 'string' ? req.body.lang : 'zh-CN';
+  const voice = normalizeVoice(req.body?.voice);
   if (!text.trim()) {
     return res.status(400).json({ status: 'error', message: '缺少文本' });
   }
-  const url = await ensureAudioWithRetry(text, lang);
+  const url = await ensureAudioWithRetry(text, lang, 3, voice);
   if (!url) {
     return res.status(503).json({ status: 'error', message: '语音生成服务暂不可用' });
   }
@@ -58,10 +59,11 @@ ttsRouter.get('/file/:hash.mp3', (req, res) => {
 });
 
 // 启动整本故事（或指定若干页）的语音生成任务
-// body: { pages: [{ text }], lang?: string }
+// body: { pages: [{ text }], lang?: string, voice?: 'daddy'|'mommy'|'grandpa'|'grandma' }
 ttsRouter.post('/story', (req, res) => {
   const pages = Array.isArray(req.body?.pages) ? req.body.pages : [];
   const lang = typeof req.body?.lang === 'string' ? req.body.lang : 'zh-CN';
+  const voice = normalizeVoice(req.body?.voice);
   const texts: string[] = pages.map((p: unknown) =>
     typeof (p as { text?: unknown } | null)?.text === 'string'
       ? ((p as { text: string }).text as string)
@@ -84,7 +86,7 @@ ttsRouter.post('/story', (req, res) => {
   void (async () => {
     for (let i = 0; i < texts.length; i++) {
       const text = texts[i];
-      job.urls[i] = text.trim() ? await ensureAudioWithRetry(text, lang) : null;
+      job.urls[i] = text.trim() ? await ensureAudioWithRetry(text, lang, 3, voice) : null;
       job.done = i + 1;
     }
     job.status = 'done';
@@ -106,9 +108,10 @@ ttsRouter.get('/story/:jobId', (req, res) => {
 ttsRouter.get('/', (req, res) => {
   const text = typeof req.query.text === 'string' ? req.query.text : '';
   const lang = typeof req.query.lang === 'string' ? req.query.lang : 'zh-CN';
+  const voice = normalizeVoice(req.query.voice);
   if (!text.trim()) {
     return res.status(400).json({ status: 'error', message: '缺少文本' });
   }
-  const { url, hash } = cachedAudioPath(text, lang);
+  const { url, hash } = cachedAudioPath(text, lang, voice);
   return res.json({ url, ready: fs.existsSync(audioFilePath(hash)) });
 });

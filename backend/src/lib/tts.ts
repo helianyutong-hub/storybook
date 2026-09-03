@@ -9,6 +9,26 @@ import crypto from 'crypto';
 import { EdgeTTS } from 'node-edge-tts';
 import { spawn } from 'child_process';
 
+/** 朗读音色（与前端 StoryParams.voice 对应） */
+export type TtsVoice = 'daddy' | 'mommy' | 'grandpa' | 'grandma';
+
+/** 音色 → Edge TTS 语音（中文/英文各一个，宝爸/爷爷用男声，宝妈/奶奶用女声） */
+const EDGE_VOICE: Record<TtsVoice, { zh: string; en: string }> = {
+  mommy: { zh: 'zh-CN-XiaoxiaoNeural', en: 'en-US-JennyNeural' },
+  daddy: { zh: 'zh-CN-YunxiNeural', en: 'en-US-GuyNeural' },
+  grandma: { zh: 'zh-CN-XiaoyiNeural', en: 'en-US-AriaNeural' },
+  grandpa: { zh: 'zh-CN-YunjianNeural', en: 'en-US-DavisNeural' },
+};
+
+function edgeVoiceFor(voice: TtsVoice, lang: string): string {
+  const m = EDGE_VOICE[voice] ?? EDGE_VOICE.mommy;
+  return lang.startsWith('zh') ? m.zh : m.en;
+}
+
+export function normalizeVoice(v: unknown): TtsVoice {
+  return v === 'daddy' || v === 'grandpa' || v === 'grandma' || v === 'mommy' ? v : 'mommy';
+}
+
 function findTTSDir(): string {
   const dataCandidates = [
     path.resolve(process.cwd(), 'data'),
@@ -49,8 +69,8 @@ function ensureDir() {
   if (!fs.existsSync(TTS_DIR)) fs.mkdirSync(TTS_DIR, { recursive: true });
 }
 
-function hashText(text: string, lang: string): string {
-  return crypto.createHash('sha256').update(`${lang}:${text}`).digest('hex').slice(0, 32);
+function hashText(text: string, lang: string, voice: TtsVoice): string {
+  return crypto.createHash('sha256').update(`${lang}:${voice}:${text}`).digest('hex').slice(0, 32);
 }
 
 export function audioFilePath(hash: string): string {
@@ -61,18 +81,26 @@ export function audioUrl(hash: string): string {
   return `/api/tts/file/${hash}.mp3`;
 }
 
-export function cachedAudioPath(text: string, lang = 'zh-CN'): { hash: string; path: string; url: string } {
+export function cachedAudioPath(
+  text: string,
+  lang = 'zh-CN',
+  voice: TtsVoice = 'mommy',
+): { hash: string; path: string; url: string } {
   ensureDir();
-  const hash = hashText(text, lang);
+  const hash = hashText(text, lang, voice);
   return { hash, path: audioFilePath(hash), url: audioUrl(hash) };
 }
 
-async function synthesizeWithEdge(text: string, lang = 'zh-CN'): Promise<Buffer | null> {
+async function synthesizeWithEdge(text: string, lang = 'zh-CN', voice: TtsVoice = 'mommy'): Promise<Buffer | null> {
   try {
     const isZh = lang.startsWith('zh');
-    const voice = isZh ? 'zh-CN-XiaoyiNeural' : 'en-US-JennyNeural';
     const ttsLang = isZh ? 'zh-CN' : 'en-US';
-    const tts = new EdgeTTS({ voice, lang: ttsLang, outputFormat: 'audio-24khz-48kbitrate-mono-mp3', timeout: 15000 });
+    const tts = new EdgeTTS({
+      voice: edgeVoiceFor(voice, lang),
+      lang: ttsLang,
+      outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
+      timeout: 15000,
+    });
     const tmpFile = path.join(TTS_DIR, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`);
     await tts.ttsPromise(text, tmpFile);
     const buf = fs.readFileSync(tmpFile);
@@ -127,17 +155,17 @@ async function synthesizeWithGTTS(text: string, lang = 'zh-CN'): Promise<Buffer 
 }
 
 /** 调用 TTS 生成 MP3；网络不可用时返回 null */
-export async function synthesize(text: string, lang = 'zh-CN'): Promise<Buffer | null> {
-  const edge = await synthesizeWithEdge(text, lang);
+export async function synthesize(text: string, lang = 'zh-CN', voice: TtsVoice = 'mommy'): Promise<Buffer | null> {
+  const edge = await synthesizeWithEdge(text, lang, voice);
   if (edge) return edge;
   return synthesizeWithGTTS(text, lang);
 }
 
 /** 确保某段文本有缓存的音频文件；返回音频 URL，失败返回 null */
-export async function ensureAudio(text: string, lang = 'zh-CN'): Promise<string | null> {
-  const { path: filePath, url } = cachedAudioPath(text, lang);
+export async function ensureAudio(text: string, lang = 'zh-CN', voice: TtsVoice = 'mommy'): Promise<string | null> {
+  const { path: filePath, url } = cachedAudioPath(text, lang, voice);
   if (fs.existsSync(filePath)) return url;
-  const buf = await synthesize(text, lang);
+  const buf = await synthesize(text, lang, voice);
   if (!buf || buf.length === 0) return null;
   fs.writeFileSync(filePath, buf);
   return url;
@@ -148,10 +176,11 @@ export async function ensureAudioWithRetry(
   text: string,
   lang = 'zh-CN',
   attempts = 3,
+  voice: TtsVoice = 'mommy',
 ): Promise<string | null> {
   for (let i = 0; i < attempts; i++) {
     try {
-      const url = await ensureAudio(text, lang);
+      const url = await ensureAudio(text, lang, voice);
       if (url) return url;
     } catch {
       /* 继续重试 */
@@ -164,12 +193,16 @@ export async function ensureAudioWithRetry(
 }
 
 /** 为整个故事生成音频，返回每页对应的 URL（失败的页面为 null） */
-export async function generateStoryAudio(pages: { text: string }[], lang = 'zh-CN'): Promise<(string | null)[]> {
+export async function generateStoryAudio(
+  pages: { text: string }[],
+  lang = 'zh-CN',
+  voice: TtsVoice = 'mommy',
+): Promise<(string | null)[]> {
   const results: (string | null)[] = [];
   // 顺序生成，避免并发导致超时/限流；每页失败自动重试
   for (const page of pages) {
     try {
-      const url = await ensureAudioWithRetry(page.text, lang);
+      const url = await ensureAudioWithRetry(page.text, lang, 3, voice);
       results.push(url);
     } catch {
       results.push(null);

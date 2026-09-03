@@ -15,6 +15,9 @@ export type Duration = 'short' | 'medium' | 'long';
 /** 语速档位（决定朗读节奏） */
 export type Pace = 'slow' | 'normal' | 'bright';
 
+/** 朗读音色（宝爸 / 宝妈 / 爷爷 / 奶奶） */
+export type VoiceRole = 'daddy' | 'mommy' | 'grandpa' | 'grandma';
+
 /** 插画配色方案 */
 export type Palette = 'night' | 'dawn' | 'dream' | 'cozy';
 
@@ -38,6 +41,8 @@ export interface StoryParams {
   tone: SoothingTone;
   /** 朗读语言 */
   lang: StoryLang;
+  /** 朗读音色 */
+  voice: VoiceRole;
 }
 
 /** 单页插画规格（由故事引擎生成，喂给插画生成器） */
@@ -107,11 +112,11 @@ export interface AuthUser {
   method: 'phone' | 'wechat';
 }
 
-/** 时长 → 页数映射 */
-export const DURATION_PAGES: Record<Duration, number> = {
-  short: 4,
-  medium: 6,
-  long: 8,
+/** 时长 → 小任务（章节）数量映射；页数由情节自然展开，不再写死 */
+export const DURATION_EPISODES: Record<Duration, number> = {
+  short: 2,
+  medium: 3,
+  long: 5,
 };
 
 /** 语速 → 朗读速率映射（SpeechSynthesis rate） */
@@ -143,9 +148,16 @@ export const BG_SOUND_LABELS: Record<BgSound, string> = {
 };
 
 export const DURATION_LABELS: Record<Duration, string> = {
-  short: '短（4页）',
-  medium: '中（6页）',
-  long: '长（8页）',
+  short: '短篇',
+  medium: '中篇',
+  long: '长篇',
+};
+
+export const VOICE_LABELS: Record<VoiceRole, string> = {
+  daddy: '宝爸',
+  mommy: '宝妈',
+  grandpa: '爷爷',
+  grandma: '奶奶',
 };
 
 export const PACE_LABELS: Record<Pace, string> = {

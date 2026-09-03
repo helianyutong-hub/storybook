@@ -42,10 +42,10 @@ function buildPrompt(input: {
   const sysLang = input.lang === 'en' ? 'English' : 'Chinese (Simplified)';
   const lengthHint =
     input.duration === 'short'
-      ? 'about 5-6 pages'
+      ? 'a concise but complete story'
       : input.duration === 'long'
-        ? 'about 12-14 pages'
-        : 'about 8-10 pages';
+        ? 'a rich, fully-developed complete story (feel free to use 15-20 pages if the plot needs it)'
+        : 'a moderately rich, complete story';
 
   const user = `You are a professional children's bedtime story writer. Write a COMPLETE, logically coherent bedtime story for a young child (0-6 years old), in the style of a classic fairy tale like "Snow White and the Seven Dwarfs" — with a clear beginning, a small adventure or gentle conflict, a tender resolution, and a calm, sleepy ending.
 
@@ -55,6 +55,7 @@ Requirements:
 - Companion character(s): ${charText}.
 - Tone: ${input.tone || 'gentle'} (gentle / playful / calm / lullaby).
 - Length: ${lengthHint}.
+- The number of pages is NOT fixed — let the story's plot decide how many pages it needs. Do not pad to hit a page count, and do not cut a plot short to fit a limit.
 - Each page must be ONE short paragraph (2-4 soothing sentences) suitable for a single illustration and one sentence of audio narration.
 - The story MUST have a real plot arc:
   1) Opening — the child gets ready for sleep (night, stars, cozy room).
@@ -132,7 +133,7 @@ storyGenRouter.post('/', async (req: Request, res: Response) => {
     }
 
     const pages: LlmPage[] = parsed.pages
-      .slice(0, 16)
+      .slice(0, 20)
       .map((p) => ({ text: String(p?.text || '').trim(), scene: String(p?.scene || '').trim() }))
       .filter((p) => p.text);
 

@@ -6,6 +6,7 @@ services:
     runtime: docker
     rootDir: backend
     dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
     healthCheckPath: /api/health
     envVars:

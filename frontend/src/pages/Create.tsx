@@ -14,6 +14,7 @@ import {
   Baby,
   Wand2,
   Globe,
+  Mic,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -23,11 +24,13 @@ import {
   Pace,
   BgSound,
   SoothingTone,
+  VoiceRole,
   DURATION_LABELS,
   PACE_LABELS,
   BG_SOUND_LABELS,
   TONE_LABELS,
   LANG_LABELS,
+  VOICE_LABELS,
 } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { Button } from '@/components/ui/button';
@@ -53,6 +56,7 @@ export default function Create() {
     soothing: incoming?.soothing ?? lastParams.soothing ?? 70,
     tone: incoming?.tone ?? lastParams.tone ?? 'gentle',
     lang: incoming?.lang ?? lastParams.lang ?? 'zh',
+    voice: incoming?.voice ?? lastParams.voice ?? 'mommy',
   });
 
   const set = <K extends keyof StoryParams>(k: K, v: StoryParams[K]) =>
@@ -118,6 +122,9 @@ export default function Create() {
                 { value: 'long', label: DURATION_LABELS.long },
               ]}
             />
+            <p className="mt-2 text-xs text-muted-foreground">
+              故事页数由情节完整度自动决定，篇幅越长故事越丰富，不设固定页数。
+            </p>
           </CardContent>
         </Card>
 
@@ -198,6 +205,22 @@ export default function Create() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <label className="mb-1.5 flex items-center gap-1 text-sm font-semibold">
+                <Mic className="size-4 text-primary" /> 朗读音色
+              </label>
+              <Segmented<VoiceRole>
+                value={params.voice}
+                onChange={(v) => set('voice', v)}
+                columns={4}
+                options={[
+                  { value: 'daddy', label: VOICE_LABELS.daddy },
+                  { value: 'mommy', label: VOICE_LABELS.mommy },
+                  { value: 'grandpa', label: VOICE_LABELS.grandpa },
+                  { value: 'grandma', label: VOICE_LABELS.grandma },
+                ]}
+              />
+            </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between text-sm">
                 <span className="font-semibold">朗读音量</span>

@@ -14,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PACE_RATE, TONE_LABELS, BG_SOUND_LABELS, DURATION_LABELS } from '@/types/story';
+import { PACE_RATE, TONE_LABELS, BG_SOUND_LABELS, DURATION_LABELS, VOICE_LABELS } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { speak, cancelSpeech, isTTSAvailable } from '@/lib/tts';
 import { getBgSound } from '@/lib/bgSound';
@@ -79,7 +79,7 @@ export default function Preview() {
     const lang: 'zh' | 'en' = story.params.lang === 'en' ? 'en' : 'zh';
     if (!audioUrl) {
       setPreparing(true);
-      audioUrl = await ensureAudioUrl(story.pages[page].text, lang).finally(() =>
+      audioUrl = await ensureAudioUrl(story.pages[page].text, lang, story.params.voice).finally(() =>
         setPreparing(false),
       );
       if (audioUrl) {
@@ -107,6 +107,7 @@ export default function Preview() {
     await speak(story.pages[page].text, {
       rate: PACE_RATE[story.params.pace],
       volume: story.params.volume,
+      voiceRole: story.params.voice,
     });
     setSpeaking(false);
   };
@@ -158,7 +159,7 @@ export default function Preview() {
       const text = story.pages[i].text;
       let url = story.audioUrls?.[i];
       if (!url) {
-        url = await ensureAudioUrl(text, lang);
+        url = await ensureAudioUrl(text, lang, story.params.voice);
         if (url) {
           const urls = [...(story.audioUrls ?? [])];
           urls[i] = url;
@@ -181,6 +182,7 @@ export default function Preview() {
           speak(text, {
             rate: PACE_RATE[story.params.pace],
             volume: story.params.volume,
+            voiceRole: story.params.voice,
             onEnd: () => resolve(),
           });
         });
@@ -251,15 +253,6 @@ export default function Preview() {
           <h1 className="text-xl font-extrabold sm:text-2xl">{story.title}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            className="rounded-full"
-            onClick={regenerate}
-            disabled={regen}
-          >
-            <RefreshCw className={regen ? 'size-4 animate-spin' : 'size-4'} />
-            {regen ? '生成中…' : '重新生成文案'}
-          </Button>
           <Button variant="outline" className="rounded-full" onClick={() => nav('/create', { state: { params: story.params } })}>
             <Wand2 className="size-4" /> 调整参数
           </Button>
@@ -269,6 +262,27 @@ export default function Preview() {
           </Button>
         </div>
       </div>
+
+      {/* 需求 3：故事全文放最上方，文档阅读样式，家长审核优先 */}
+      <Card className="mb-6 border-white/10 bg-card/60">
+        <CardContent className="space-y-4 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">故事全文（共 {story.pages.length} 页）</p>
+            <Button variant="outline" size="sm" className="rounded-full" onClick={regenerate} disabled={regen}>
+              <RefreshCw className={regen ? 'size-3.5 animate-spin' : 'size-3.5'} />
+              {regen ? '生成中…' : '重新生成文案'}
+            </Button>
+          </div>
+          <div className="space-y-5">
+            {story.pages.map((pg, i) => (
+              <div key={pg.id} className="border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                <p className="mb-1.5 text-xs font-semibold text-primary">第 {i + 1} 页</p>
+                <p className="text-[15px] leading-relaxed text-foreground/90">{pg.text}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         {/* 故事书预览 */}
@@ -364,6 +378,7 @@ export default function Preview() {
               <Row k="角色" v={story.params.characters.join('、') || '—'} />
               <Row k="时长" v={DURATION_LABELS[story.params.duration]} />
               <Row k="基调" v={TONE_LABELS[story.params.tone]} />
+              <Row k="音色" v={VOICE_LABELS[story.params.voice] ?? '宝妈'} />
               <Row k="背景音" v={BG_SOUND_LABELS[story.params.bgSound]} />
               <Row k="哄睡强度" v={`${story.params.soothing}%`} />
             </CardContent>
@@ -396,29 +411,6 @@ export default function Preview() {
         </div>
       </div>
 
-      {/* 需求 5：故事全文展示区，方便快速核对情节文案 */}
-      <Card className="mt-6 border-white/10 bg-card/60">
-        <CardContent className="space-y-3 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold">故事全文（共 {story.pages.length} 页）</p>
-            <Button variant="outline" size="sm" className="rounded-full" onClick={regenerate} disabled={regen}>
-              <RefreshCw className={regen ? 'size-3.5 animate-spin' : 'size-3.5'} />
-              {regen ? '生成中…' : '重新生成文案'}
-            </Button>
-          </div>
-          <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
-            {story.pages.map((pg, i) => (
-              <div key={pg.id} className="rounded-xl bg-white/[0.03] p-3">
-                <p className="mb-1 text-xs font-semibold text-primary">第 {i + 1} 页</p>
-                <p className="text-sm leading-relaxed text-foreground/90">{pg.text}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            不满意可点「重新生成文案」换一版故事；上面「自动播放全部」可一键连续听完整本。
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

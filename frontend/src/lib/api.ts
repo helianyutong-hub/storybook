@@ -1,6 +1,6 @@
 // 后端接口封装（认证、故事历史、用户偏好）
 import apiClient from './api-client';
-import { Story, StoryParams, UserPreferences, AuthUser, StorySummary } from '@/types/story';
+import { Story, StoryParams, UserPreferences, AuthUser, StorySummary, VoiceRole } from '@/types/story';
 
 export interface LoginResult {
   token: string;
@@ -53,11 +53,11 @@ export async function deleteStory(id: string): Promise<void> {
   await apiClient.delete(`/stories/${id}`);
 }
 
-/** 按需为某段文本生成语音，返回音频 URL（失败返回 null）。lang: 'zh' | 'en' */
-export async function ensureAudioUrl(text: string, lang: 'zh' | 'en' = 'zh'): Promise<string | null> {
+/** 按需为某段文本生成语音，返回音频 URL（失败返回 null）。lang: 'zh' | 'en'；voice: 音色 */
+export async function ensureAudioUrl(text: string, lang: 'zh' | 'en' = 'zh', voice?: VoiceRole): Promise<string | null> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
   try {
-    const { data } = await apiClient.post('/tts', { text, lang: locale });
+    const { data } = await apiClient.post('/tts', { text, lang: locale, voice: voice ?? 'mommy' });
     return data?.url ?? null;
   } catch {
     return null;
@@ -71,11 +71,12 @@ export interface AudioProgress {
 }
 
 /** 让后端为若干页文本启动一次语音生成任务（后端异步执行，返回任务 id） */
-async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en'): Promise<string> {
+async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en', voice?: VoiceRole): Promise<string> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
   const { data } = await apiClient.post('/tts/story', {
     pages: texts.map((text) => ({ text })),
     lang: locale,
+    voice: voice ?? 'mommy',
   });
   return data?.jobId;
 }
@@ -127,6 +128,7 @@ export async function ensureStoryAudioUrls(
     const jobId = await startStoryAudioJob(
       missing.map((i) => story.pages[i].text),
       lang,
+      story.params.voice,
     );
     const generated = await waitStoryAudioJob(jobId, (p) => {
       onProgress?.({ done: total - missing.length + p.done, total });

@@ -230,6 +230,7 @@ export default function Player() {
         speak(s.pages[page].text, {
           rate: PACE_RATE[s.params.pace],
           volume,
+          voiceRole: s.params.voice,
           onEnd: () => {
             if (cancelled) return;
             if (page < last) {
