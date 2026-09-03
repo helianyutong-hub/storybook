@@ -207,18 +207,18 @@ export default function Player() {
         };
       }
     } else {
-      // 微信内置浏览器不支持浏览器语音，静默回退等于没有声音。
-      // 这里保持"想要播放"的状态，把整本语音一次性补生成完；
-      // 生成完成后 currentAudioUrl 会变化，本 effect 重新执行即自动接着播放。
+      // 没有服务端语音（纯静态部署 / 后端不可达）：优先用浏览器原生语音，
+      // 这样在 Chrome 等普通浏览器里打开也能直接出声；微信内置浏览器不支持时再提示。
+      if (isTTSAvailable()) {
+        setAudioMode('speech');
+        playSpeech();
+        return;
+      }
+      // 浏览器也不支持语音：尝试补生成服务端语音（配置后端后生效），否则停止。
       setAudioMode('none');
       void generateAllAudio(true).then((urls) => {
         if (cancelled) return;
         if (urls?.[page]) return;
-        if (isTTSAvailable()) {
-          setAudioMode('speech');
-          playSpeech();
-          return;
-        }
         setPlaying(false);
       });
       return;

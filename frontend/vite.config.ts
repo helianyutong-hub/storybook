@@ -6,6 +6,8 @@ import process from "process"
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages 项目站点部署在 /storybook/ 子路径下
+  base: '/storybook/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
