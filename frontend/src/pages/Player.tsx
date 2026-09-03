@@ -166,10 +166,12 @@ export default function Player() {
 
   const last = story ? story.pages.length - 1 : 0;
 
-  // 背景音随播放状态开关（不随页码变化而中断）
+  // 背景音随播放状态开关（等语音真正就绪后才启动，不和语音抢戏）
   useEffect(() => {
     if (!bg || !story) return;
-    if (playing && story.params.bgSound !== 'none') {
+    // 只有在「语音已就绪且正在播放」时才开背景音，避免语音还没出来背景音先响了
+    const audioReady = audioMode === 'mp3' || audioMode === 'speech';
+    if (playing && audioReady && story.params.bgSound !== 'none') {
       bg.play(story.params.bgSound, volume * 0.5);
       setBgOn(true);
     } else {
@@ -177,7 +179,7 @@ export default function Player() {
       setBgOn(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing]);
+  }, [playing, audioMode]);
 
   // 逐页朗读 / 播放
   useEffect(() => {
@@ -417,11 +419,28 @@ export default function Player() {
         )}
 
         {needsTap && !audioGen && (
-          <p className="mt-5 animate-pulse rounded-full bg-primary/25 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur">
-            轻触屏幕任意位置，开始播放
-          </p>
+          <div className="mt-5 animate-pulse rounded-full bg-primary/25 px-6 py-3 backdrop-blur">
+            <p className="text-sm font-semibold text-white">
+              轻触屏幕任意位置，开始播放
+            </p>
+          </div>
         )}
       </div>
+
+      {/* 微信等浏览器拦截自动播放时，吸底显示「点击开始播放」按钮（移动端友好） */}
+      {needsTap && !audioGen && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-50 flex cursor-pointer items-center justify-center bg-primary px-6 py-4 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] active:bg-primary/90"
+          onClick={resumeByTap}
+          role="button"
+          tabIndex={0}
+        >
+          <p className="flex items-center gap-2 text-base font-bold text-white">
+            <Volume2 className="size-6 animate-bounce" />
+            点击这里开始播放 ▶
+          </p>
+        </div>
+      )}
 
       {/* 控制条 */}
       <div className="relative z-10 mx-auto mb-6 w-full max-w-xl px-5">
@@ -431,6 +450,11 @@ export default function Player() {
           {audioMode === 'speech' && <span className="ml-1 text-white/50">· 浏览器语音</span>}
           {audioMode === 'none' && !audioGen && (
             <span className="ml-1 text-amber-300">· 语音准备中</span>
+          )}
+          {audioGen && (
+            <span className="ml-1 text-primary">
+              · 生成中 {donePages}/{totalPages}
+            </span>
           )}
         </div>
         <div className="mb-4 flex items-center justify-center gap-2">

@@ -45,6 +45,15 @@ export default function Preview() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   /** 语音播放失败时的提示信息（null = 无错误） */
   const [audioError, setAudioError] = useState<string | null>(null);
+  /**
+   * 微信等浏览器要求 audio.play() 必须在用户手势（click/touchstart）的直接回调中调用。
+   * 异步加载音频 URL 后已脱离手势上下文，此时把 URL 存到这里，
+   * 显示「点击播放」按钮让用户再点一次，在 onClick 里调 play() 就能出声。
+   */
+  const [pendingPlayUrl, setPendingPlayUrl] = useState<string | null>(null);
+  /** 自动播放全部：预加载完所有音频后，等待用户点击才开始逐页播放 */
+  const [autoPlayReady, setAutoPlayReady] = useState(false);
+  const [autoPlayUrls, setAutoPlayUrls] = useState<(string | null)[] | null>(null);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
 
@@ -74,20 +83,77 @@ export default function Preview() {
     return ua.includes('micromessenger');
   }, []);
 
+  /**
+   * 在用户手势中直接调用 audio.play()（微信兼容）。
+   * 返回 true = 播放成功，false = 被拦截
+   */
+  const playAudioInGesture = (url: string): boolean => {
+    if (!audioRef.current) return false;
+    const audio = audioRef.current;
+    audio.volume = story.params.volume;
+    audio.src = url;
+    // 同步调用 play()，在 onClick 回调栈内，微信不会拦截
+    const promise = audio.play();
+    if (promise !== undefined) {
+      promise
+        .then(() => {
+          setSpeaking(true);
+          setPendingPlayUrl(null);
+        })
+        .catch(() => {
+          setSpeaking(false);
+          setAudioError('播放失败，请再试一次');
+        });
+      // 返回 true 表示已发起播放请求（无论最终成败）
+      return true;
+    }
+    // 部分老浏览器 play() 不返回 Promise，假设成功
+    setSpeaking(true);
+    setPendingPlayUrl(null);
+    return true;
+  };
+
+  /** 用户点击「点击播放」按钮时调用（在手势上下文内） */
+  const handlePendingPlay = () => {
+    if (pendingPlayUrl && audioRef.current) {
+      const audio = audioRef.current;
+      audio.volume = story.params.volume;
+      audio.src = pendingPlayUrl;
+      audio.onended = () => setSpeaking(false);
+      audio.onerror = () => {
+        setSpeaking(false);
+        setAudioError('音频播放失败，请检查网络后重试');
+      };
+      audio.play()
+        .then(() => {
+          setSpeaking(true);
+          setPendingPlayUrl(null);
+        })
+        .catch(() => {
+          setSpeaking(false);
+          setPendingPlayUrl(null);
+          setAudioError('播放被浏览器拦截，请再点一次试听');
+        });
+    }
+  };
+
   const previewSpeak = async () => {
-    if (speaking) {
+    // 如果正在播放或等待用户点击播放，则停止
+    if (speaking || pendingPlayUrl) {
       cancelSpeech();
       audioRef.current?.pause();
       setSpeaking(false);
+      setPendingPlayUrl(null);
       return;
     }
-    setAudioError(null);
-    setSpeaking(true);
 
-    // 若已有服务端音频，优先用 <audio> 播放（微信兼容）；否则按需生成
+    // 先检查是否已有该页的音频 URL
     let audioUrl = story.audioUrls?.[page];
     const lang: 'zh' | 'en' = story.params.lang === 'en' ? 'en' : 'zh';
+
     if (!audioUrl) {
+      // 需要异步加载：脱离手势上下文，加载完后存入 pendingPlayUrl 让用户再点
+      setAudioError(null);
       setPreparing(true);
       try {
         audioUrl = await ensureAudioUrl(story.pages[page].text, lang, story.params.voice);
@@ -102,25 +168,32 @@ export default function Preview() {
         setPreparing(false);
       }
     }
-    if (audioUrl && audioRef.current) {
-      const audio = audioRef.current;
-      audio.volume = story.params.volume;
-      audio.src = audioUrl;
-      const done = () => setSpeaking(false);
-      audio.onended = done;
-      audio.onerror = () => {
-        setSpeaking(false);
-        setAudioError('音频播放失败，请检查网络后重试');
-      };
-      try {
-        await audio.play();
-        // play() 成功但用户可能听不到（微信音量/静音），保持 speaking 状态直到 onended
-        return;
-      } catch (e) {
-        // 浏览器拦截自动播放（非用户手势上下文）
-        setSpeaking(false);
-        setAudioError('播放被浏览器拦截，请再点一次试听');
-        return;
+
+    if (audioUrl) {
+      // 有 URL 了，但可能已经不在手势上下文中了（经过了 await）
+      // 直接尝试播放，如果被拦截则显示「点击播放」按钮
+      if (audioRef.current) {
+        const audio = audioRef.current;
+        audio.volume = story.params.volume;
+        audio.src = audioUrl;
+        audio.onended = () => setSpeaking(false);
+        audio.onerror = () => {
+          setSpeaking(false);
+          setAudioError('音频播放失败，请检查网络后重试');
+        };
+        try {
+          await audio.play();
+          // play() 成功：说明还在手势上下文中（或浏览器允许自动播放）
+          setSpeaking(true);
+          return;
+        } catch {
+          // 被拦截：微信/浏览器的自动播放策略阻止了
+          // 不报错，改为显示「点击播放」按钮让用户再点一次
+          setSpeaking(false);
+          setPendingPlayUrl(audioUrl);
+          setAudioError(null);
+          return;
+        }
       }
     }
 
@@ -130,33 +203,26 @@ export default function Preview() {
       setAudioError('当前浏览器不支持语音朗读，需要连接后端服务才能播放语音');
       return;
     }
-    // 微信内置浏览器的 speechSynthesis 是空壳，不发声，直接提示
     if (isWeChat) {
       setSpeaking(false);
       setAudioError('微信浏览器无法使用浏览器语音，正在尝试连接云端语音…');
-      // 再试一次强制生成云端语音
       setPreparing(true);
       try {
         audioUrl = await ensureAudioUrl(story.pages[page].text, lang, story.params.voice);
-        if (audioUrl && audioRef.current) {
+        if (audioUrl) {
           const urls = [...(story.audioUrls ?? [])];
           urls[page] = audioUrl;
           updateDraft(story.id, { audioUrls: urls });
-          const audio = audioRef.current;
-          audio.volume = story.params.volume;
-          audio.src = audioUrl;
-          audio.onended = () => setSpeaking(false);
-          audio.onerror = () => { setSpeaking(false); setAudioError('云端语音播放失败'); };
-          setSpeaking(true);
-          await audio.play().catch(() => { setSpeaking(false); setAudioError('播放被拦截，请再点一次'); });
-          return;
+          setPendingPlayUrl(audioUrl);
+          setAudioError(null);
+        } else {
+          setAudioError('无法连接语音服务，请确认网络正常或稍后再试');
         }
       } catch {
-        // ignore
+        setAudioError('无法连接语音服务，请确认网络正常或稍后再试');
       } finally {
         setPreparing(false);
       }
-      setAudioError('无法连接语音服务，请确认网络正常或稍后再试');
       return;
     }
 
@@ -191,77 +257,105 @@ export default function Preview() {
   const stopAll = () => {
     autoPlayingRef.current = false;
     setAutoPlaying(false);
+    setAutoPlayReady(false);
+    setAutoPlayUrls(null);
     setAudioError(null);
     cancelSpeech();
     audioRef.current?.pause();
+    setSpeaking(false);
+    setPendingPlayUrl(null);
+  };
+
+  /** 用户点击「▶ 开始播放」后在实际手势中逐页播放（微信兼容） */
+  const startAutoPlayInGesture = () => {
+    if (!autoPlayUrls || !story) return;
+    autoPlayingRef.current = true;
+    setAutoPlayReady(false);
+    setAutoPlaying(true);
+    setAudioError(null);
+
+    let currentIndex = 0;
+    const urls = autoPlayUrls;
+    const audio = audioRef.current;
+
+    const playPage = () => {
+      if (!autoPlayingRef.current || currentIndex >= story.pages.length) {
+        // 播放完毕或被停止
+        autoPlayingRef.current = false;
+        setAutoPlaying(false);
+        // 检查是否一页都没成功
+        const hasAnyAudio = urls.some(Boolean);
+        if (!hasAnyAudio) {
+          setAudioError('没有可用的语音服务，请检查网络连接');
+        }
+        return;
+      }
+
+      setPage(currentIndex);
+      const url = urls[currentIndex];
+
+      if (url && audio) {
+        audio.volume = story.params.volume;
+        audio.src = url;
+        audio.onended = () => {
+          currentIndex++;
+          setTimeout(playPage, 350);
+        };
+        audio.onerror = () => {
+          currentIndex++;
+          setTimeout(playPage, 350);
+        };
+        audio.play().catch(() => {
+          // 这一页被拦截，跳过继续下一页
+          currentIndex++;
+          setTimeout(playPage, 200);
+        });
+      } else {
+        // 这页没有音频，跳过
+        currentIndex++;
+        setTimeout(playPage, 200);
+      }
+    };
+
+    // 第一页的 play() 在用户手势中调用，微信不会拦截
+    playPage();
   };
 
   const playAll = async () => {
-    if (autoPlayingRef.current) {
+    if (autoPlayingRef.current || autoPlayReady) {
       stopAll();
       return;
     }
     setAudioError(null);
-    autoPlayingRef.current = true;
-    setAutoPlaying(true);
-    setSpeaking(false);
+    setAutoPlaying(true); // 显示"停止"状态（实际是"准备中"）
+    setAutoPlayReady(false);
     cancelSpeech();
     const lang: 'zh' | 'en' = story.params.lang === 'en' ? 'en' : 'zh';
 
+    // 第一步：预加载所有页的音频 URL
+    const urls: (string | null)[] = [...(story.audioUrls ?? new Array(story.pages.length).fill(null))];
     for (let i = 0; i < story.pages.length; i++) {
-      if (!autoPlayingRef.current) break;
-      setPage(i);
-      // 等页面切换渲染（插画/文本）后再朗读
-      await new Promise((r) => setTimeout(r, 250));
-      if (!autoPlayingRef.current) break;
-
-      const text = story.pages[i].text;
-      let url = story.audioUrls?.[i];
-      if (!url) {
+      if (!autoPlayingRef.current) break; // 用户点了停止
+      if (!urls[i]) {
         try {
-          url = await ensureAudioUrl(text, lang, story.params.voice);
-          if (url) {
-            const urls = [...(story.audioUrls ?? [])];
-            urls[i] = url;
-            updateDraft(story.id, { audioUrls: urls });
+          urls[i] = await ensureAudioUrl(story.pages[i].text, lang, story.params.voice);
+          if (urls[i]) {
+            // 实时更新已缓存的 URL
+            updateDraft(story.id, { audioUrls: [...urls] });
           }
         } catch {
-          url = null;
+          urls[i] = null;
         }
       }
+    }
 
-      if (url && audioRef.current) {
-        await new Promise<void>((resolve) => {
-          const audio = audioRef.current!;
-          audio.volume = story.params.volume;
-          audio.src = url!;
-          audio.onended = () => resolve();
-          audio.onerror = () => resolve();
-          audio.play().then(() => {}).catch(() => resolve());
-        });
-      } else if (isWeChat || !isTTSAvailable()) {
-        // 微信或无语音能力：跳过这一页的语音，但不中断整个播放
-        // 如果全部页都没有语音，结束后给个提示
-        continue;
-      } else {
-        await new Promise<void>((resolve) => {
-          speak(text, {
-            rate: PACE_RATE[story.params.pace],
-            volume: story.params.volume,
-            voiceRole: story.params.voice,
-            onEnd: () => resolve(),
-          });
-        });
-      }
-      await new Promise((r) => setTimeout(r, 350));
-    }
-    autoPlayingRef.current = false;
-    setAutoPlaying(false);
-    // 播放完毕后检查是否一页都没成功播放
-    const hasAnyAudio = story.audioUrls?.some(Boolean) ?? false;
-    if (!hasAnyAudio && !isTTSAvailable()) {
-      setAudioError('没有可用的语音服务，请检查网络连接或稍后重试');
-    }
+    if (!autoPlayingRef.current) return; // 已停止
+
+    // 第二步：所有 URL 准备好了，显示「▶ 点击开始播放」按钮
+    // 不在这里调 audio.play()（已脱离手势上下文），等用户再点一次
+    setAutoPlayUrls(urls);
+    setAutoPlayReady(true);
+    setAutoPlaying(false); // 暂时回到"可点击"状态，让用户看到"开始播放"
   };
 
   const toggleBg = () => {
@@ -390,36 +484,60 @@ export default function Preview() {
           <Card className="border-white/10 bg-card/60">
             <CardContent className="space-y-3 p-5">
               <p className="text-sm font-semibold">试听与检查</p>
-              <Button
-                onClick={playAll}
-                className="w-full rounded-full"
-                variant={autoPlaying ? 'secondary' : 'default'}
-              >
-                {autoPlaying ? (
-                  <>
-                    <Pause className="size-4" /> 停止播放
-                  </>
-                ) : (
-                  <>
-                    <Play className="size-4" /> 自动播放全部（自动翻页）
-                  </>
-                )}
-              </Button>
-              <div className="flex gap-2">
+              {/* 自动播放全部 / 准备中 / 开始播放 */}
+              {autoPlayReady ? (
                 <Button
-                  onClick={previewSpeak}
-                  className="flex-1 rounded-full"
-                  disabled={preparing || autoPlaying}
+                  onClick={startAutoPlayInGesture}
+                  className="w-full rounded-full bg-primary animate-pulse"
+                  size="lg"
                 >
-                  {preparing ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : speaking ? (
-                    <Pause className="size-4" />
-                  ) : (
-                    <Play className="size-4" />
-                  )}
-                  {preparing ? '云端语音生成中…' : speaking ? '停止试听' : '试听这一页'}
+                  <Play className="size-5" /> ▶ 点击开始自动播放（共 {story.pages.length} 页）
                 </Button>
+              ) : (
+                <Button
+                  onClick={playAll}
+                  className="w-full rounded-full"
+                  variant={autoPlaying ? 'secondary' : 'default'}
+                  disabled={autoPlaying && !autoPlayReady}
+                >
+                  {autoPlaying ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> 正在准备语音…
+                    </>
+                  ) : (
+                    <>
+                      <Play className="size-4" /> 自动播放全部（自动翻页）
+                    </>
+                  )}
+                </Button>
+              )}
+
+              <div className="flex gap-2">
+                {/* 试听这一页 / 点击播放 */}
+                {pendingPlayUrl ? (
+                  <Button
+                    onClick={handlePendingPlay}
+                    className="flex-1 rounded-full bg-primary animate-pulse"
+                    size="lg"
+                  >
+                    <Play className="size-5" /> ▶ 点击播放
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={previewSpeak}
+                    className="flex-1 rounded-full"
+                    disabled={preparing || autoPlaying}
+                  >
+                    {preparing ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : speaking ? (
+                      <Pause className="size-4" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
+                    {preparing ? '云端语音生成中…' : speaking ? '停止试听' : '试听这一页'}
+                  </Button>
+                )}
                 <Button
                   variant={bgOn ? 'default' : 'secondary'}
                   className="rounded-full"
@@ -433,6 +551,11 @@ export default function Preview() {
               <p className="text-xs leading-relaxed text-muted-foreground">
                 试听与播放的语音由云端逐页生成并缓存，需要保持网络连接；
                 某一页首次生成可能需要等待几秒，生成后即可重复播放。
+                {isWeChat && (
+                  <span className="mt-1 block font-medium text-primary">
+                    微信浏览器需点击「▶ 播放」按钮才能出声
+                  </span>
+                )}
               </p>
               {audioError && (
                 <p className="mt-1.5 rounded-lg bg-amber-500/15 px-3 py-2 text-xs font-medium text-amber-300">
@@ -460,9 +583,9 @@ export default function Preview() {
             </CardContent>
           </Card>
 
-          {/* 家长确认 */}
-          <Card className="border-primary/30 bg-primary/[0.06]">
-            <CardContent className="space-y-3 p-5">
+          {/* 家长确认 — 移动端吸底显示，方便操作 */}
+          <Card className="sticky bottom-0 z-10 border-primary/30 bg-card/95 backdrop-blur-md md:static md:bg-primary/[0.06]">
+            <CardContent className="space-y-3 p-4 md:p-5">
               <label className="flex cursor-pointer items-start gap-3">
                 <input
                   type="checkbox"
