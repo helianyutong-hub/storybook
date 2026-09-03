@@ -50,3 +50,36 @@ cd frontend && pnpm install && pnpm dev
 
 前端为纯静态构建（`pnpm build` → `dist/`），可托管到任意静态服务（GitHub Pages / Vercel / Netlify 等）。
 注意：若部署到子路径，需在 `frontend/vite.config.ts` 设置 `base`。
+
+## 完整版部署（后端 + 大模型，获得完整剧情与云端语音）
+
+当前 GitHub Pages 上的是「轻量版」：故事走本地模板、语音走浏览器 TTS。要获得
+「大模型写的完整剧情 + 云端自然语音」，需把后端也部署出去。
+
+### 1. 部署后端（任意支持 Docker 的 PaaS）
+- 推荐 Render / Railway / Fly.io：连接本仓库，使用仓库内 `backend/Dockerfile` 部署。
+- 后端已就绪：`PORT` 读环境变量、CORS 默认 `*`，`pnpm build && pnpm start` 即可运行。
+- 部署后得到后端地址，如 `https://storybook-backend.onrender.com`。
+
+### 2. 配置后端环境变量
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `NODE_ENV` | 设为 `production` | `production` |
+| `CORS_ORIGIN` | 允许的前端来源（Pages 地址），或 `*` | `https://helianyutong-hub.github.io` |
+| `LLM_API_KEY` | 大模型 API Key（可选，不填则回退模板） | `sk-xxx` |
+| `LLM_BASE_URL` | OpenAI 兼容接口地址（可选） | `https://api.deepseek.com/v1` |
+| `LLM_MODEL` | 模型名（可选） | `deepseek-chat` |
+
+> 不填 `LLM_*` 也能跑，只是故事走模板；填了才有「白雪公主式」完整剧情。
+
+### 3. 让前端指向后端
+本地构建时注入后端地址，再重新发布 Pages：
+```bash
+cd frontend
+VITE_API_BASE=https://storybook-backend.onrender.com/api pnpm build
+# 将 dist/ 推到 gh-pages 分支（同前）
+```
+或在 PaaS 的环境变量里设置 `VITE_API_BASE` 走 CI 自动构建。
+
+### 4. 完成
+打开 Pages 链接即可：大模型生成完整故事、云端合成语音、自动翻页播放全部。

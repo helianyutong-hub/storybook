@@ -1,12 +1,16 @@
 import axios, { AxiosError } from 'axios';
 
 /**
- * Axios instance configured for API requests
- * Uses Vite proxy to forward /api requests to http://localhost:3000
- * No need for VITE_API_BASE_URL environment variable
+ * Axios instance configured for API requests.
+ * 开发环境走 Vite 代理（baseURL='/api' 转发到本地 :3000）。
+ * 部署到 GitHub Pages 等静态托管时，可用 VITE_API_BASE 指向真实后端，
+ * 例如 VITE_API_BASE=https://your-backend.onrender.com/api
  */
+const API_BASE: string =
+  (import.meta.env as { VITE_API_BASE?: string }).VITE_API_BASE ?? '/api';
+
 export const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
