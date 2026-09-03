@@ -418,7 +418,19 @@ export default function Player() {
           </p>
         )}
 
-        {needsTap && !audioGen && (
+        {/* 音频还在加载/生成中：显示等待提示（不与 needsTap 同时出现） */}
+        {playing && audioMode === 'none' && !audioGen && !audioError && !needsTap && (
+          <div className="mt-6 flex max-w-sm flex-col items-center gap-1.5 rounded-2xl bg-black/30 px-5 py-3 text-center backdrop-blur">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white/80">
+              <Loader2 className="size-4 animate-spin" /> 语音准备中…
+            </p>
+            <p className="text-[11px] leading-relaxed text-white/50">
+              正在加载语音，请稍候
+            </p>
+          </div>
+        )}
+
+        {needsTap && !audioGen && audioMode !== 'none' && (
           <div className="mt-5 animate-pulse rounded-full bg-primary/25 px-6 py-3 backdrop-blur">
             <p className="text-sm font-semibold text-white">
               轻触屏幕任意位置，开始播放
@@ -428,7 +440,7 @@ export default function Player() {
       </div>
 
       {/* 微信等浏览器拦截自动播放时，吸底显示「点击开始播放」按钮（移动端友好） */}
-      {needsTap && !audioGen && (
+      {needsTap && !audioGen && audioMode !== 'none' && (
         <div
           className="fixed inset-x-0 bottom-0 z-50 flex cursor-pointer items-center justify-center bg-primary px-6 py-4 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] active:bg-primary/90"
           onClick={resumeByTap}
