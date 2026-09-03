@@ -22,7 +22,7 @@ cd backend  && pnpm install && pnpm dev
 cd frontend && pnpm install && pnpm dev
 ```
 
-前端默认 http://localhost:5173，后端默认 http://localhost:3001。
+前端默认 http://localhost:5173，后端默认 http://localhost:3000（API 前缀 `/api`，前端通过 Vite 代理转发）。
 
 > 若安装时报 `ERR_PNPM_CODEBUDDY_BROKER_DENY`，是因为 pnpm 默认软链接模式被环境拦截。
 > 本仓库根目录与 backend/frontend 已放置 `.npmrc`（`node-linker=hoisted`）解决；
