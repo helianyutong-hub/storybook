@@ -53,7 +53,8 @@ apiClient.interceptors.response.use(
     // 401 Unauthorized：token 已失效（常见于重新部署后数据重置），自动清掉登录态并引导重新登录
     if (error.response?.status === 401) {
       localStorage.removeItem('storybook_auth');
-      window.location.href = '/login';
+      // 部署在子路径（如 /storybook/）时，跳转需带上 base 前缀
+      window.location.href = `${import.meta.env.BASE_URL}login`;
     }
 
     // Handle 403 Forbidden

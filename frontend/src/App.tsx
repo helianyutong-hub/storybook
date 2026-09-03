@@ -23,11 +23,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// GitHub Pages 部署在 /storybook/ 子路径下，路由需匹配该 basename；
+// 本地开发（base 为 /）时 basename 为空字符串，行为不变。
+const BASENAME = import.meta.env.BASE_URL.replace(/\/+$/, '');
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={BASENAME}>
           <AppProvider>
             <Toaster richColors position="top-center" />
             <Header />
