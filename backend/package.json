@@ -2,7 +2,7 @@
   "name": "spec-template-backend",
   "version": "1.0.0",
   "description": "Backend API server for full-stack web application template",
-  "type": "module",
+  "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
