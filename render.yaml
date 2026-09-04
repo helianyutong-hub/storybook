@@ -21,3 +21,11 @@ services:
         sync: false
       - key: LLM_MODEL
         sync: false
+      # 以下为可选：填了才有阿里云 CosyVoice 音色区分（爸爸/妈妈/爷爷/奶奶各不相同）
+      # 不填则回退 Edge TTS，功能照常，只是四个音色听起来差不多
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: DASHSCOPE_WORKSPACE_ID
+        sync: false
+      - key: ALIYUN_TTS_MODEL
+        sync: false
