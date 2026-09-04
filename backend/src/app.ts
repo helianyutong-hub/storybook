@@ -10,6 +10,7 @@ import { httpLogger } from './middleware/logger'
 import { systemRouter } from './modules/system'
 import { authRouter } from './modules/auth'
 import { storiesRouter } from './modules/stories'
+import { publicStoriesRouter } from './modules/publicStories'
 import { preferencesRouter } from './modules/preferences'
 import { ttsRouter } from './modules/tts'
 import { storyGenRouter } from './modules/storyGen'
@@ -41,6 +42,7 @@ export const createApp = (): Application => {
   });
   app.use(`${env.API_PREFIX}/auth`, authRouter)
   app.use(`${env.API_PREFIX}/stories`, storiesRouter)
+  app.use(`${env.API_PREFIX}/public/stories`, publicStoriesRouter)
   app.use(`${env.API_PREFIX}/preferences`, preferencesRouter)
   app.use(`${env.API_PREFIX}/tts`, ttsRouter)
   app.use(`${env.API_PREFIX}/story-gen`, storyGenRouter)

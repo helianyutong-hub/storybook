@@ -30,18 +30,42 @@ function toSummary(s: Story): StorySummary {
   };
 }
 
+/**
+ * 故事「内容指纹」：同一套参数 + 标题 + 页数 即视为同一个故事内容。
+ * 反复进入同一故事预览页、或重复用相同参数新建时，历史只保留最新一条，避免重复堆叠。
+ */
+function storyContentKey(s: Story): string {
+  const p = s.params;
+  return [
+    s.title,
+    p.childName ?? '',
+    (p.characters ?? []).join(','),
+    p.tone ?? '',
+    p.duration ?? '',
+    p.soothing ?? '',
+    p.lang ?? '',
+    p.pace ?? '',
+    p.bgSound ?? '',
+    s.pages.length,
+  ].join('|');
+}
+
 export default function History() {
   const nav = useNavigate();
   const { drafts, removeDraft } = useApp();
 
-  /** 本地草稿即为历史（按创建时间倒序）；登录与否都不影响查看 */
-  const items = useMemo(
-    () =>
-      Object.values(drafts)
-        .map(toSummary)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [drafts],
-  );
+  /** 本地草稿即为历史（按内容去重、只留最新一条，再按创建时间倒序）；登录与否都不影响查看 */
+  const items = useMemo(() => {
+    const latest = new Map<string, Story>();
+    for (const s of Object.values(drafts)) {
+      const key = storyContentKey(s);
+      const cur = latest.get(key);
+      if (!cur || s.createdAt > cur.createdAt) latest.set(key, s);
+    }
+    return Array.from(latest.values())
+      .map(toSummary)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [drafts]);
 
   const remove = (id: string) => {
     if (!confirm('确定删除这个故事吗？')) return;

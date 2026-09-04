@@ -386,7 +386,8 @@ export function generateStory(input: StoryParams, nonce = 0): Story {
     soothing: input.soothing ?? 70,
     tone: input.tone ?? 'gentle',
     lang: input.lang ?? 'zh',
-    voice: input.voice ?? 'mommy',
+    // 统一用温柔的年轻女声（不读 input.voice，避免 lastParams 残留旧音色导致声音变化）
+    voice: 'mommy',
   };
   const seedBase = `${p.childName}|${p.characters.join(',')}|${p.duration}|${p.tone}|${p.soothing}|${p.bgSound}|${p.lang}|${nonce}`;
   const rng = new Rng(seedBase);
@@ -490,7 +491,7 @@ export function buildStoryFromLLM(
     soothing: input.soothing ?? 70,
     tone: input.tone ?? 'gentle',
     lang: input.lang ?? 'zh',
-    voice: input.voice ?? 'mommy',
+    voice: 'mommy',
   };
   const total = raw.pages.length;
   const rng = new Rng(`llm|${p.childName}|${p.characters.join(',')}|${p.lang}|${Date.now()}|${Math.floor(Math.random() * 1_000_000)}`);

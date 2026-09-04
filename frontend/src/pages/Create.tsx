@@ -53,7 +53,8 @@ export default function Create() {
     soothing: incoming?.soothing ?? lastParams.soothing ?? 70,
     tone: incoming?.tone ?? lastParams.tone ?? 'gentle',
     lang: incoming?.lang ?? lastParams.lang ?? 'zh',
-    voice: incoming?.voice ?? lastParams.voice ?? 'mommy',
+    // 音色固定为温柔的年轻女声（不再读取 lastParams 里可能残留的旧音色，避免声音忽老忽年轻）
+    voice: 'mommy',
   });
 
   const set = <K extends keyof StoryParams>(k: K, v: StoryParams[K]) =>
@@ -62,9 +63,10 @@ export default function Create() {
   const canGenerate = true; // 名字可为空，默认“宝宝”
 
   const submit = () => {
-    setLastParams(params);
+    // 音色固定为温柔女声，写入 lastParams 也强制 mommy，避免旧值残留导致声音飘忽
+    setLastParams({ ...params, voice: 'mommy' });
     toast.success('开始为宝宝编织故事…');
-    nav('/generating', { state: { params } });
+    nav('/generating', { state: { params: { ...params, voice: 'mommy' } } });
   };
 
   return (

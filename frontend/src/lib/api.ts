@@ -87,6 +87,22 @@ export async function deleteStory(id: string): Promise<void> {
   await apiClient.delete(`/stories/${id}`);
 }
 
+/** 保存一个故事到公开分享区（分享给好友用，无需登录），幂等 upsert */
+export async function savePublicStory(story: Story): Promise<{ id: string }> {
+  const { data } = await apiClient.post('/public/stories', { story });
+  return data;
+}
+
+/** 从公开分享区按 id 读取故事（分享进来的别人打开用，无需登录） */
+export async function fetchPublicStory(id: string): Promise<Story | null> {
+  try {
+    const { data } = await apiClient.get(`/public/stories/${id}`);
+    return data.story;
+  } catch {
+    return null;
+  }
+}
+
 /** 单条语音合成响应 */
 interface TtsUrlResponse {
   url?: string;

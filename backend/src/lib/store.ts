@@ -62,10 +62,12 @@ interface DB {
   tokens: Record<string, string>; // token -> userId
   stories: StoredStory[];
   preferences: Record<string, Preferences>;
+  /** 公开分享的故事（不绑定 userId，任何人凭 id 即可读取，用于「分享给好友」） */
+  publicStories: StoredStory[];
 }
 
 function defaultDB(): DB {
-  return { users: [], tokens: {}, stories: [], preferences: {} };
+  return { users: [], tokens: {}, stories: [], preferences: {}, publicStories: [] };
 }
 
 function read(): DB {
@@ -149,6 +151,21 @@ export function deleteStory(id: string, userId: string): boolean {
     return true;
   }
   return false;
+}
+
+// ---------- 公开分享的故事（分享给好友，不绑定用户） ----------
+export function upsertPublicStory(story: StoredStory): StoredStory {
+  const db = read();
+  const idx = db.publicStories.findIndex((s) => s.id === story.id);
+  if (idx >= 0) db.publicStories[idx] = story;
+  else db.publicStories.push(story);
+  write(db);
+  return story;
+}
+
+export function getPublicStory(id: string): StoredStory | null {
+  const db = read();
+  return db.publicStories.find((s) => s.id === id) ?? null;
 }
 
 // ---------- 偏好 ----------

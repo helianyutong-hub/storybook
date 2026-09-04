@@ -13,11 +13,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PACE_RATE, TONE_LABELS, BG_SOUND_LABELS, DURATION_LABELS, VOICE_LABELS } from '@/types/story';
+import { PACE_RATE, TONE_LABELS, BG_SOUND_LABELS, DURATION_LABELS, VOICE_LABELS, Story } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { speak, cancelSpeech, isTTSAvailable } from '@/lib/tts';
 import { getBgSound } from '@/lib/bgSound';
-import { ensureAudioUrl, ensureStoryAudioUrls, invalidateAudioCache } from '@/lib/api';
+import { fetchPublicStory, ensureAudioUrl, ensureStoryAudioUrls, invalidateAudioCache } from '@/lib/api';
 import { regenerateStoryText } from '@/lib/storyEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,9 +27,11 @@ import { PageDots } from '@/components/PageDots';
 export default function Preview() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { getDraft, updateDraft } = useApp();
+  const { getDraft, updateDraft, setDraft } = useApp();
 
-  const story = id ? getDraft(id) : undefined;
+  // 故事来源：优先本地草稿；本地缺失（例如好友通过分享链接打开）时从公开分享区拉取
+  const [story, setStory] = useState<Story | undefined>(() => (id ? getDraft(id) : undefined));
+  const [notFound, setNotFound] = useState(false);
   const [page, setPage] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [bgOn, setBgOn] = useState(false);
@@ -49,6 +51,34 @@ export default function Preview() {
   const [pendingPlayUrl, setPendingPlayUrl] = useState<string | null>(null);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
+
+  // 本地草稿缺失时（分享链接进来的场景），从公开分享区拉取故事
+  useEffect(() => {
+    if (!id) return;
+    const local = getDraft(id);
+    if (local) {
+      setStory(local);
+      setNotFound(false);
+      return;
+    }
+    setNotFound(false);
+    let alive = true;
+    fetchPublicStory(id)
+      .then((remote) => {
+        if (!alive) return;
+        if (remote) {
+          setStory(remote);
+          setDraft(remote);
+        } else {
+          setNotFound(true);
+        }
+      })
+      .catch(() => alive && setNotFound(true));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     return () => {
@@ -91,13 +121,21 @@ export default function Preview() {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [story]);
 
-  if (!story) {
+  if (notFound) {
     return (
       <div className="mx-auto max-w-md px-6 py-24 text-center">
         <p className="text-muted-foreground">没有找到这个故事，可能已被清除。</p>
         <Button className="mt-4 rounded-full" onClick={() => nav('/create')}>
           重新制作
         </Button>
+      </div>
+    );
+  }
+
+  if (!story) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-muted-foreground">
+        正在加载故事…
       </div>
     );
   }

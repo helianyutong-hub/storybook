@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { Story } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { getBgSound } from '@/lib/bgSound';
-import { fetchStory, startStoryAudioJob, pollStoryAudioJob, getCachedAudioUrls } from '@/lib/api';
+import { fetchPublicStory, savePublicStory, startStoryAudioJob, pollStoryAudioJob, getCachedAudioUrls } from '@/lib/api';
 import { cancelSpeech } from '@/lib/tts';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -84,7 +84,7 @@ export default function Player() {
     return `${base}${sub}/preview/${story.id}`;
   }, [story]);
 
-  // 若本地草稿缺失，尝试从云端拉取（支持跨设备回看）
+  // 若本地草稿缺失，尝试从云端（公开分享区）拉取（支持跨设备回看 / 分享进来的场景）
   useEffect(() => {
     if (loaded.current || !id) return;
     loaded.current = true;
@@ -94,7 +94,7 @@ export default function Player() {
       setVolume(local.params.volume);
       return;
     }
-    fetchStory(id).then((remote) => {
+    fetchPublicStory(id).then((remote) => {
       if (remote) {
         setStory(remote);
         setVolume(remote.params.volume);
@@ -453,6 +453,14 @@ export default function Player() {
     window.location.href = '/create';
   };
 
+  // 分享前把故事上传到公开分享区，确保好友打开链接能读到（静默失败，不影响复制链接）
+  const publishStory = () => {
+    if (!story) return;
+    savePublicStory(story).catch(() => {
+      /* 上传失败不阻塞，复制链接仍可用；对方打开时可能需重新生成 */
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#0d0a26]">
       {/* 隐藏音频元素，用于服务端 TTS 播放（微信兼容） */}
@@ -558,7 +566,7 @@ export default function Player() {
               <Button
                 variant="secondary"
                 className="rounded-full"
-                onClick={() => setShareOpen(true)}
+                onClick={() => { publishStory(); setShareOpen(true); }}
               >
                 <Share2 className="size-4" /> 分享给好友听
               </Button>
