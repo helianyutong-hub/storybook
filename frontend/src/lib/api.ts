@@ -87,11 +87,21 @@ export async function deleteStory(id: string): Promise<void> {
   await apiClient.delete(`/stories/${id}`);
 }
 
+/** 单条语音合成响应 */
+interface TtsUrlResponse {
+  url?: string;
+}
+
+/** 批量语音合成任务响应 */
+interface TtsJobResponse {
+  jobId?: string;
+}
+
 /** 按需为某段文本生成语音，返回音频 URL（失败返回 null）。lang: 'zh' | 'en'；voice: 音色 */
 export async function ensureAudioUrl(text: string, lang: 'zh' | 'en' = 'zh', voice?: VoiceRole): Promise<string | null> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
   try {
-    const { data } = await retryRequest(() =>
+    const { data } = await retryRequest<TtsUrlResponse>(() =>
       apiClient.post('/tts', { text, lang: locale, voice: voice ?? 'mommy' })
     );
     return data?.url ?? null;
@@ -109,14 +119,14 @@ export interface AudioProgress {
 /** 让后端为若干页文本启动一次语音生成任务（后端异步执行，返回任务 id） */
 async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en', voice?: VoiceRole): Promise<string> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
-  const { data } = await retryRequest(() =>
+  const { data } = await retryRequest<TtsJobResponse>(() =>
     apiClient.post('/tts/story', {
       pages: texts.map((text) => ({ text })),
       lang: locale,
       voice: voice ?? 'mommy',
     })
   );
-  return data?.jobId;
+  return data?.jobId ?? '';
 }
 
 /**

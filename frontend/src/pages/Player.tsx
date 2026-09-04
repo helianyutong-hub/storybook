@@ -41,11 +41,6 @@ export default function Player() {
   const reloadTried = useRef<Record<number, number>>({});
   /** 语音相关的错误提示 */
   const [audioError, setAudioError] = useState<string | null>(null);
-  /** 是否在微信内置浏览器中 */
-  const isWeChat = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return /micromessenger/i.test(navigator.userAgent);
-  }, []);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
 
@@ -186,7 +181,7 @@ export default function Player() {
           .catch(() => {
             /* 微信可能拦截自动播放，用户可点击中间播放按钮手动触发 */
           });
-        audio.oncanplay = undefined;
+        audio.oncanplay = null;
         const onEnd = () => {
           if (cancelled) return;
           if (page < last) {
