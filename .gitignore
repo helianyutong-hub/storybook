@@ -1,0 +1,8 @@
+# gh-pages 分支只需要根目录的构建产物，
+# 源码目录一律忽略，避免 git add -A 误把 node_modules 提交上来。
+node_modules/
+frontend/
+backend/
+deploy/
+.github/
+*.md
