@@ -14,6 +14,11 @@ services:
       - API_PREFIX=/api
       - CORS_ORIGIN=*
       - LOG_LEVEL=info
+      # 阿里云百炼语音合成（CosyVoice）：从 backend/.env 读取
+      # 不配也能跑，会自动回退到 Edge TTS，只是音色区分度差
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - DASHSCOPE_WORKSPACE_ID=${DASHSCOPE_WORKSPACE_ID:-}
+      - ALIYUN_TTS_MODEL=${ALIYUN_TTS_MODEL:-cosyvoice-v3-flash}
     volumes:
-      # 持久化故事/用户数据（后端用本地 JSON 文件存储）
+      # 持久化故事/用户数据 + 语音缓存（都在 data/ 下，重建容器不会丢）
       - ./data:/app/data
