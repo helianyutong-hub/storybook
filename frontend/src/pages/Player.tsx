@@ -496,12 +496,12 @@ export default function Player() {
               size="icon-lg"
               className="size-16 rounded-full bg-primary text-primary-foreground shadow-xl"
               onClick={togglePlay}
-              disabled={audioGen}
+              disabled={audioGen && !playing}
             >
-              {audioGen ? (
-                <Loader2 className="size-7 animate-spin" />
-              ) : playing ? (
+              {playing ? (
                 <Pause className="size-7" />
+              ) : audioGen ? (
+                <Loader2 className="size-7 animate-spin" />
               ) : (
                 <Play className="size-7" />
               )}
