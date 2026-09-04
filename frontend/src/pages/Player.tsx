@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Play,
@@ -11,7 +12,12 @@ import {
   Moon,
   RotateCcw,
   Loader2,
+  Share2,
+  Copy,
+  Plus,
+  Check,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Story } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { getBgSound } from '@/lib/bgSound';
@@ -62,8 +68,21 @@ export default function Player() {
   const pausedByUserRef = useRef(false);
   /** 语音相关的错误提示 */
   const [audioError, setAudioError] = useState<string | null>(null);
+  /** 是否显示"分享给好友"浮层 */
+  const [shareOpen, setShareOpen] = useState(false);
+  /** 复制链接后短暂打勾 */
+  const [copied, setCopied] = useState(false);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
+
+  /** 当前故事的对外分享链接（不依赖 basename，全地址） */
+  const shareUrl = useMemo(() => {
+    if (typeof window === 'undefined' || !story) return '';
+    const base = window.location.origin;
+    // GitHub Pages 子路径部署时 `import.meta.env.BASE_URL` 是 '/storybook/'，本地是 '/'
+    const sub = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+    return `${base}${sub}/preview/${story.id}`;
+  }, [story]);
 
   // 若本地草稿缺失，尝试从云端拉取（支持跨设备回看）
   useEffect(() => {
@@ -377,6 +396,63 @@ export default function Player() {
   const totalPages = audioProgress.total || story.pages.length;
   const donePages = Math.min(audioProgress.done, totalPages);
 
+  // 复制分享链接到剪贴板（带 fallback：iOS 旧版 / 微信内置可能没 clipboard API）
+  const copyShareLink = async () => {
+    const url = shareUrl;
+    if (!url) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // fallback：临时 textarea + execCommand
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      toast.success('链接已复制，去微信发给好友吧');
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast.error('复制失败，请长按上方链接手动复制');
+    }
+  };
+
+  // 通用浏览器走 navigator.share；微信内置浏览器不支持，所以这步会走到 catch，
+  // 提示用户长按上方链接手动发送给好友
+  const shareToFriend = async () => {
+    if (!story) return;
+    const url = shareUrl;
+    const shareData: ShareData = {
+      title: story.title,
+      text: `宝宝专属睡前故事：${story.title}（${story.params.childName || '宝宝'}）`,
+      url,
+    };
+    if (typeof navigator !== 'undefined' && 'share' in navigator && navigator.canShare?.(shareData) !== false) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        /* 用户取消或不支持，落回复制 */
+      }
+    }
+    // 兜底：复制链接 + 提示
+    await copyShareLink();
+  };
+
+  const goCreate = () => {
+    try { audioRef.current?.pause(); } catch { /* ignore */ }
+    wantPlayingRef.current = false;
+    setPlaying(false);
+    // window.location 走，微信兼容
+    window.location.href = '/create';
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#0d0a26]">
       {/* 隐藏音频元素，用于服务端 TTS 播放（微信兼容） */}
@@ -475,13 +551,27 @@ export default function Player() {
             <p className="flex items-center gap-2 text-lg font-bold text-primary">
               <Moon className="size-5" /> 晚安，好梦 🌙
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               <Button onClick={restart} className="rounded-full">
                 <RotateCcw className="size-4" /> 再讲一遍
               </Button>
               <Button
                 variant="secondary"
                 className="rounded-full"
+                onClick={() => setShareOpen(true)}
+              >
+                <Share2 className="size-4" /> 分享给好友听
+              </Button>
+              <Button
+                variant="secondary"
+                className="rounded-full"
+                onClick={goCreate}
+              >
+                <Plus className="size-4" /> 继续创作新故事
+              </Button>
+              <Button
+                variant="ghost"
+                className="rounded-full text-white/70"
                 onClick={exitToPreview}
               >
                 返回预览
@@ -549,6 +639,44 @@ export default function Player() {
           )}
         </div>
       </div>
+
+      {/* 分享给好友浮层：用 createPortal 挂到 body 脱离 motion 容器，吸底 + 居中 */}
+      {shareOpen && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center" onClick={() => setShareOpen(false)}>
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-lg font-bold">
+                <Share2 className="size-5 text-primary" /> 把故事分享给好友
+              </h3>
+              <button onClick={() => setShareOpen(false)} className="rounded-full p-1 text-gray-500 hover:bg-gray-100" aria-label="关闭">
+                <X className="size-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-gray-600">
+              把下面的链接发给好友，对方打开就能直接看到「{story.title}」。
+            </p>
+            <div className="mb-4 break-all rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700">
+              {shareUrl}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button onClick={copyShareLink} className="rounded-full">
+                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied ? '已复制' : '复制链接'}
+              </Button>
+              <Button variant="secondary" onClick={shareToFriend} className="rounded-full">
+                <Share2 className="size-4" /> 分享给好友
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              微信内如未弹出分享面板，可直接「复制链接」后粘贴到聊天发给好友。
+            </p>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -8,8 +8,6 @@ import {
   Pause,
   Volume2,
   Wand2,
-  ShieldCheck,
-  Cloud,
   Sparkles,
   RefreshCw,
   Loader2,
@@ -19,8 +17,7 @@ import { PACE_RATE, TONE_LABELS, BG_SOUND_LABELS, DURATION_LABELS, VOICE_LABELS 
 import { useApp } from '@/store/AppStore';
 import { speak, cancelSpeech, isTTSAvailable } from '@/lib/tts';
 import { getBgSound } from '@/lib/bgSound';
-import { saveStory, ensureAudioUrl, ensureStoryAudioUrls, invalidateAudioCache } from '@/lib/api';
-import { getErrorMessage } from '@/lib/api-client';
+import { ensureAudioUrl, ensureStoryAudioUrls, invalidateAudioCache } from '@/lib/api';
 import { regenerateStoryText } from '@/lib/storyEngine';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,15 +27,13 @@ import { PageDots } from '@/components/PageDots';
 export default function Preview() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { getDraft, updateDraft, auth } = useApp();
+  const { getDraft, updateDraft } = useApp();
 
   const story = id ? getDraft(id) : undefined;
   const [page, setPage] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const [bgOn, setBgOn] = useState(false);
   const [agreed, setAgreed] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [regen, setRegen] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -287,30 +282,6 @@ export default function Preview() {
     nav(`/player/${story.id}`);
   };
 
-  const save = async () => {
-    if (!auth) {
-      toast('登录后即可把故事保存到云端同步', { action: { label: '去登录', onClick: () => nav('/login', { state: { next: `/preview/${story.id}` } }) } });
-      return;
-    }
-    setSaving(true);
-    try {
-      await saveStory({ ...story, approved: agreed });
-      setSaved(true);
-      toast.success('已保存到云端，可跨设备查看');
-    } catch (err) {
-      const msg = getErrorMessage(err);
-      if (msg?.includes('401') || msg?.includes('登录') || msg?.includes('Unauthorized')) {
-        toast.error('登录状态已过期，请重新登录后保存', {
-          action: { label: '去登录', onClick: () => nav('/login', { state: { next: `/preview/${story.id}` } }) },
-        });
-      } else {
-        toast.error(`保存失败：${msg || '请稍后再试'}`);
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="mx-auto max-w-5xl px-4 pb-48 pt-6 sm:px-6">
       <audio ref={audioRef} preload="none" className="hidden" playsInline />
@@ -322,10 +293,6 @@ export default function Preview() {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="rounded-full" onClick={() => nav('/create', { state: { params: story.params } })}>
             <Wand2 className="size-4" /> 调整参数
-          </Button>
-          <Button variant="secondary" className="rounded-full" onClick={save} disabled={saving || saved}>
-            {saved ? <ShieldCheck className="size-4" /> : <Cloud className="size-4" />}
-            {saved ? '已保存' : '保存到云端'}
           </Button>
         </div>
       </div>

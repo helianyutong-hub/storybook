@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { History as HistoryIcon, Plus, Trash2, Moon, Music, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { StorySummary, TONE_LABELS, BG_SOUND_LABELS } from '@/types/story';
+import { Story, StorySummary, TONE_LABELS, BG_SOUND_LABELS } from '@/types/story';
 import { useApp } from '@/store/AppStore';
-import { listStories, deleteStory } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
 function fmt(iso: string) {
@@ -16,36 +15,39 @@ function fmt(iso: string) {
   }
 }
 
+/** 把 Story 转成 History 列表用的 StorySummary（不再依赖云端） */
+function toSummary(s: Story): StorySummary {
+  return {
+    id: s.id,
+    title: s.title,
+    childName: s.params.childName || '宝宝',
+    tone: s.params.tone,
+    bgSound: s.params.bgSound,
+    duration: s.params.duration,
+    pageCount: s.pages.length,
+    createdAt: s.createdAt,
+    approved: !!s.approved,
+  };
+}
+
 export default function History() {
   const nav = useNavigate();
-  const { auth } = useApp();
-  const [items, setItems] = useState<StorySummary[] | null>(null);
+  const { drafts, removeDraft } = useApp();
 
-  useEffect(() => {
-    if (!auth) {
-      nav('/login', { state: { next: '/history' }, replace: true });
-      return;
-    }
-    listStories()
-      .then(setItems)
-      .catch(() => {
-        // 静默失败：没有数据时只显示空状态，不弹顶部红色报错
-        setItems([]);
-      });
-  }, [auth, nav]);
+  /** 本地草稿即为历史（按创建时间倒序）；登录与否都不影响查看 */
+  const items = useMemo(
+    () =>
+      Object.values(drafts)
+        .map(toSummary)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [drafts],
+  );
 
-  const remove = async (id: string) => {
+  const remove = (id: string) => {
     if (!confirm('确定删除这个故事吗？')) return;
-    try {
-      await deleteStory(id);
-      setItems((prev) => (prev ? prev.filter((s) => s.id !== id) : prev));
-      toast.success('已删除');
-    } catch {
-      toast.error('删除失败');
-    }
+    removeDraft(id);
+    toast.success('已删除');
   };
-
-  if (!auth) return null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-20 pt-6 sm:px-6">
@@ -54,16 +56,16 @@ export default function History() {
           <h1 className="flex items-center gap-2 text-2xl font-extrabold">
             <HistoryIcon className="size-6 text-primary" /> 我的故事历史
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">登录账号后，故事会自动云端保存，跨设备都能看到。</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            每次创作的故事都会自动保存到本地历史，方便随时回看和播放。
+          </p>
         </div>
         <Button className="rounded-full" onClick={() => nav('/create')}>
           <Plus className="size-4" /> 新建
         </Button>
       </div>
 
-      {items === null ? (
-        <div className="py-20 text-center text-muted-foreground">读取中…</div>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] py-20 text-center">
           <Moon className="mx-auto mb-3 size-10 text-muted-foreground" />
           <p className="text-muted-foreground">还没有保存的故事。</p>
