@@ -311,7 +311,7 @@ export default function Preview() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-20 pt-6 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 pb-32 pt-6 sm:px-6">
       <audio ref={audioRef} preload="none" className="hidden" playsInline />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -455,35 +455,37 @@ export default function Preview() {
               <Row k="哄睡强度" v={`${story.params.soothing}%`} />
             </CardContent>
           </Card>
-
-          {/* 家长确认 — 移动端吸底显示，方便操作 */}
-          <Card className="sticky bottom-0 z-10 border-primary/30 bg-card/95 backdrop-blur-md md:static md:bg-primary/[0.06]">
-            <CardContent className="space-y-3 p-4 md:p-5">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-1 size-4 accent-[var(--primary)]"
-                />
-                <span className="text-sm">
-                  <span className="font-semibold">家长预览确认：</span>
-                  我已检查故事内容，确认适合 {story.params.childName || '宝宝'} 睡前聆听。
-                </span>
-              </label>
-              <Button
-                onClick={goPlay}
-                disabled={!agreed}
-                className="h-12 w-full rounded-full bg-primary text-base font-bold text-primary-foreground"
-              >
-                <Sparkles className="size-5" /> 确认播放给孩子
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
+      {/* 家长确认 — 固定在底部，始终可见（不再依赖 sticky 在 grid 里失效的问题） */}
+      <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-3 pt-2 sm:px-6">
+        <Card className="border-primary/30 bg-card/95 shadow-2xl backdrop-blur-md">
+          <CardContent className="space-y-2.5 p-3.5 md:p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 size-4 accent-[var(--primary)]"
+              />
+              <span className="text-sm leading-snug">
+                <span className="font-semibold">家长预览确认：</span>
+                我已检查故事内容，确认适合 {story.params.childName || '宝宝'} 睡前聆听。
+              </span>
+            </label>
+            <Button
+              onClick={goPlay}
+              disabled={!agreed}
+              className="h-11 w-full rounded-full bg-primary text-base font-bold text-primary-foreground md:h-12"
+            >
+              <Sparkles className="size-5" /> 确认播放给孩子
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
+
   );
 }
 

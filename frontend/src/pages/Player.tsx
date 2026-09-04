@@ -126,10 +126,11 @@ export default function Player() {
               done: Number(data.done || 0),
               total: Number(data.total || story.pages.length),
             });
-            // 第 1 页一就绪就开播，不等整本
+            // 第 1 页就绪后**不自动开播**——等用户点击播放按钮才播
+            // （避免用户刚进页面就被突如其来的声音吓到，也避免微信兼容性问题）
             if (!startedPlaying && incoming[0]) {
-              setPlaying(true);
               startedPlaying = true;
+              // 不再 setPlaying(true)
             }
           }
           if (data.status === 'done') break;
@@ -164,14 +165,11 @@ export default function Player() {
     // 第一步：从 localStorage 缓存读取（可能 Preview 页已经预生成好了）
     const cached = getCachedAudioUrls(story.id);
     if (cached && cached.length >= story.pages.length) {
-      // 缓存命中：直接用缓存的 URLs，立即开始播放
-      const allReady = cached.every(Boolean);
-      updateDraft(story.id, { audioUrls: cached });
-      setStory((s) => (s ? { ...s, audioUrls: cached } : s));
-      if (allReady || cached[0]) {
-        setPlaying(true);
-      }
-      return;
+    // 缓存命中：直接用缓存的 URLs，但**不自动开播**——等用户点击播放按钮
+    updateDraft(story.id, { audioUrls: cached });
+    setStory((s) => (s ? { ...s, audioUrls: cached } : s));
+    // 不再 setPlaying(true)：用户需要手动点 ▶ 才开始播（微信兼容 + 符合预期）
+    return;
     }
 
     // 第二步：缓存没命中或部分缺失，后台生成（第 1 页就绪即开播，不阻塞 UI）
