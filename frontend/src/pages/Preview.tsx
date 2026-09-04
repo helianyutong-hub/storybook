@@ -52,6 +52,16 @@ export default function Preview() {
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
 
+  /**
+   * ⚠️ 必须放在所有 early return 之前 —— React hooks 规则要求每次 render 调用顺序一致。
+   * 早期版本里这个 useMemo 在 `if (!story) return` 之后，导致首次 render（story=undefined）和
+   * 加载完（story≠undefined）的 hook 数量不一致，触发 Minified React error #310。
+   */
+  const isWeChat = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return navigator.userAgent.toLowerCase().includes('micromessenger');
+  }, []);
+
   // 本地草稿缺失时（分享链接进来的场景），从公开分享区拉取故事
   useEffect(() => {
     if (!id) return;
@@ -139,13 +149,6 @@ export default function Preview() {
       </div>
     );
   }
-
-  /** 检测是否在微信内置浏览器中 */
-  const isWeChat = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const ua = navigator.userAgent.toLowerCase();
-    return ua.includes('micromessenger');
-  }, []);
 
   /** 用户点击「点击播放」按钮时调用（在手势上下文内） */
   const handlePendingPlay = () => {

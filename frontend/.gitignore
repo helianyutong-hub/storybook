@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vite 缓存目录
+.vite/
+
+# 教程类文档（不需要纳入版本控制）
+/发版保姆级教程.html

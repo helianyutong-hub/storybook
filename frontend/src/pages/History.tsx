@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { History as HistoryIcon, Plus, Trash2, Moon, Music, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -53,6 +53,11 @@ function storyContentKey(s: Story): string {
 export default function History() {
   const nav = useNavigate();
   const { drafts, removeDraft } = useApp();
+  /**
+   * 当前正在等待二次确认删除的故事 id。
+   * 用 React 状态 + 自定义确认条实现，避免 window.confirm 在微信 X5 内核被劫持成「关闭网页」。
+   */
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   /** 本地草稿即为历史（按内容去重、只留最新一条，再按创建时间倒序）；登录与否都不影响查看 */
   const items = useMemo(() => {
@@ -67,9 +72,11 @@ export default function History() {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [drafts]);
 
-  const remove = (id: string) => {
-    if (!confirm('确定删除这个故事吗？')) return;
+  const startDelete = (id: string) => setConfirmDeleteId(id);
+  const cancelDelete = () => setConfirmDeleteId(null);
+  const confirmDelete = (id: string) => {
     removeDraft(id);
+    setConfirmDeleteId(null);
     toast.success('已删除');
   };
 
@@ -130,16 +137,40 @@ export default function History() {
                   )}
                 </div>
               </button>
-              <div className="mt-3 flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full text-destructive hover:bg-destructive/10"
-                  onClick={() => remove(s.id)}
-                >
-                  <Trash2 className="size-3.5" /> 删除
-                </Button>
-              </div>
+              {confirmDeleteId === s.id ? (
+                // 二次确认条：避免 window.confirm 在微信浏览器被劫持成「关闭网页」
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-destructive/30 bg-destructive/[0.08] px-3 py-2 text-xs">
+                  <span className="font-medium text-destructive">确定删除这个故事吗？</span>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 rounded-full px-3"
+                      onClick={cancelDelete}
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 rounded-full bg-destructive px-3 text-xs text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => confirmDelete(s.id)}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-destructive hover:bg-destructive/10"
+                    onClick={() => startDelete(s.id)}
+                  >
+                    <Trash2 className="size-3.5" /> 删除
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
