@@ -31,6 +31,7 @@ import {
   TONE_LABELS,
   LANG_LABELS,
   VOICE_LABELS,
+  VOICE_HINTS,
 } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { Button } from '@/components/ui/button';
@@ -220,6 +221,9 @@ export default function Create() {
                   { value: 'grandma', label: VOICE_LABELS.grandma },
                 ]}
               />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {VOICE_HINTS[params.voice]}
+              </p>
             </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between text-sm">

@@ -160,6 +160,17 @@ export const VOICE_LABELS: Record<VoiceRole, string> = {
   grandma: '奶奶',
 };
 
+/**
+ * 音色的声音特征说明（对应后端阿里云 CosyVoice 的真实音色）。
+ * 四个音色在年龄和性别上都拉开差距，所以听感差异明显。
+ */
+export const VOICE_HINTS: Record<VoiceRole, string> = {
+  daddy: '暖男音，30 多岁',
+  mommy: '温柔女声，20 多岁',
+  grandpa: '沧桑男声，60 岁以上',
+  grandma: '慈祥女声，60 岁以上',
+};
+
 export const PACE_LABELS: Record<Pace, string> = {
   slow: '慢（更催眠）',
   normal: '适中',

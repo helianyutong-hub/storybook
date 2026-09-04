@@ -1,7 +1,14 @@
 import { Router } from 'express';
 import fs from 'fs';
 import crypto from 'crypto';
-import { audioFilePath, ensureAudioWithRetry, cachedAudioPath, normalizeVoice } from '../lib/tts';
+import {
+  audioFilePath,
+  ensureAudioWithRetry,
+  cachedAudioPath,
+  normalizeVoice,
+  ttsProvider,
+  aliyunVoiceMap,
+} from '../lib/tts';
 
 export const ttsRouter: Router = Router();
 
@@ -56,6 +63,18 @@ ttsRouter.get('/file/:hash.mp3', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=31536000');
   fs.createReadStream(file).pipe(res);
   return;
+});
+
+// 自检：查看当前生效的语音引擎，以及每个音色实际对应的阿里云音色
+// 配完 DASHSCOPE_API_KEY 后打开 /api/tts/provider 即可确认是否生效
+ttsRouter.get('/provider', (_req, res) => {
+  return res.json({
+    provider: ttsProvider(),
+    configured: !!process.env.DASHSCOPE_API_KEY?.trim(),
+    workspaceEndpoint: !!process.env.DASHSCOPE_WORKSPACE_ID?.trim(),
+    model: process.env.ALIYUN_TTS_MODEL?.trim() || 'cosyvoice-v3-flash',
+    voices: aliyunVoiceMap(),
+  });
 });
 
 // 启动整本故事（或指定若干页）的语音生成任务

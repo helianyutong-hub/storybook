@@ -1,5 +1,6 @@
-// 服务端语音合成（无需 API Key）
-// 优先使用 Microsoft Edge 在线 TTS（node-edge-tts），失败后回退到 gTTS。
+// 服务端语音合成
+// 优先使用阿里云百炼 CosyVoice（音色区分度最好，尤其是老人/成人音色差异明显），
+// 未配置 API Key 或调用失败时，回退到 Microsoft Edge 在线 TTS，再失败则用 gTTS。
 // 生成 MP3 后缓存到 data/tts，供前端 <audio> 播放。
 // 若服务器无法访问外网，会优雅降级，由前端回退到浏览器原生语音。
 
@@ -11,6 +12,32 @@ import { spawn } from 'child_process';
 
 /** 朗读音色（与前端 StoryParams.voice 对应） */
 export type TtsVoice = 'daddy' | 'mommy' | 'grandpa' | 'grandma';
+
+/**
+ * 音色 → 阿里云百炼 CosyVoice 音色。
+ * 选音原则：年龄跨度拉到最大（20 岁 vs 60 岁以上），男女各半，
+ * 这样"爸爸/妈妈/爷爷/奶奶"四个角色一听就能分辨——Edge TTS 时代只能靠调 pitch，
+ * 区分度极差，这里直接用不同年龄段、不同性别的真实音色。
+ *
+ * 音色参数来自阿里云官方文档：https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list
+ * fallback 用于主音色不可用时（账号未开通 / 地域限制）自动降级，保证仍能出声。
+ */
+const ALIYUN_VOICE: Record<TtsVoice, { primary: string; fallback: string; label: string }> = {
+  // 宝妈：20-30 岁女性，细腻柔和，有声书场景专用
+  mommy: { primary: 'longwanjun_v3', fallback: 'longanwen_v3', label: '细腻柔声女 20-30岁' },
+  // 宝爸：30-35 岁男性，居家暖男
+  daddy: { primary: 'longanyun_v3', fallback: 'longanzhi_v3', label: '居家暖男 30-35岁' },
+  // 爷爷：60 岁以上男性，沧桑岁月
+  grandpa: { primary: 'longlaobo_v3', fallback: 'longxiu_v3', label: '沧桑岁月爷 60岁以上' },
+  // 奶奶：60 岁以上女性，烟火从容
+  grandma: { primary: 'longlaoyi_v3', fallback: 'longyuan_v3', label: '烟火从容阿姨 60岁以上' },
+};
+
+// 注意：必须在运行时读取，不能写成模块级常量——
+// 否则模块加载早于 dotenv.config() 时会拿不到 .env 里的配置。
+function cosyvoiceModel(): string {
+  return process.env.ALIYUN_TTS_MODEL?.trim() || 'cosyvoice-v3-flash';
+}
 
 /** 音色 → Edge TTS 语音（中文/英文各一个，宝爸/爷爷用男声，宝妈/奶奶用女声） */
 const EDGE_VOICE: Record<TtsVoice, { zh: string; en: string }> = {
@@ -27,6 +54,22 @@ function edgeVoiceFor(voice: TtsVoice, lang: string): string {
 
 export function normalizeVoice(v: unknown): TtsVoice {
   return v === 'daddy' || v === 'grandpa' || v === 'grandma' || v === 'mommy' ? v : 'mommy';
+}
+
+/** 当前生效的语音合成引擎（供日志/健康检查展示） */
+export function ttsProvider(): 'aliyun' | 'edge' | 'gtts' {
+  if (process.env.DASHSCOPE_API_KEY) return 'aliyun';
+  return 'edge';
+}
+
+/** 供外部（如 /api/health）查看每个音色实际对应的阿里云音色名 */
+export function aliyunVoiceMap() {
+  return Object.fromEntries(
+    (Object.keys(ALIYUN_VOICE) as TtsVoice[]).map((k) => [
+      k,
+      { voice: ALIYUN_VOICE[k].primary, fallback: ALIYUN_VOICE[k].fallback, desc: ALIYUN_VOICE[k].label },
+    ]),
+  );
 }
 
 function findTTSDir(): string {
@@ -89,6 +132,170 @@ export function cachedAudioPath(
   ensureDir();
   const hash = hashText(text, lang, voice);
   return { hash, path: audioFilePath(hash), url: audioUrl(hash) };
+}
+
+/**
+ * 阿里云百炼 CosyVoice 合成前的文本预处理。
+ * 官方已知问题：cosyvoice-v3-flash 遇到「·」分隔的数字段会漏读/重复念读，
+ * 替换成中文逗号可规避。
+ */
+function preprocessForAliyun(text: string): string {
+  return text.replace(/·/g, '，').slice(0, 2000);
+}
+
+/** 标准 DashScope 多模态端点（只需 API Key） */
+const DASHSCOPE_URL =
+  'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+
+/** CosyVoice 专用端点（需要百炼控制台的 WorkspaceId） */
+function workspaceUrl(): string | null {
+  const ws = process.env.DASHSCOPE_WORKSPACE_ID?.trim();
+  return ws ? `https://${ws}.cn-beijing.maas.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer` : null;
+}
+
+type AliyunEndpoint = {
+  name: string;
+  url: string;
+  /** 按官方文档，两个端点的参数层级不同：Workspace 端点把音色放在 input 里 */
+  buildBody: (text: string, voice: string) => Record<string, unknown>;
+};
+
+function aliyunEndpoints(): AliyunEndpoint[] {
+  const list: AliyunEndpoint[] = [];
+  const wsUrl = workspaceUrl();
+  if (wsUrl) {
+    list.push({
+      name: 'workspace',
+      url: wsUrl,
+      buildBody: (text, voice) => ({
+        model: cosyvoiceModel(),
+        input: { text, voice, format: 'mp3', sample_rate: 24000 },
+      }),
+    });
+  }
+  list.push({
+    name: 'dashscope',
+    url: DASHSCOPE_URL,
+    buildBody: (text, voice) => ({
+      model: cosyvoiceModel(),
+      input: { text },
+      parameters: { voice, format: 'mp3', sample_rate: 24000 },
+    }),
+  });
+  return list;
+}
+
+/** 从阿里云响应里取出音频二进制：优先 url（下载），其次 base64 data */
+async function extractAudio(payload: unknown): Promise<Buffer | null> {
+  const audio = (payload as { output?: { audio?: { url?: string; data?: string } } })?.output?.audio;
+  if (!audio) return null;
+  if (typeof audio.url === 'string' && audio.url) {
+    try {
+      const res = await fetch(audio.url, { signal: AbortSignal.timeout(30000) });
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length) return buf;
+      }
+    } catch (err) {
+      console.warn('[TTS] 下载阿里云音频失败:', err instanceof Error ? err.message : String(err));
+    }
+  }
+  if (typeof audio.data === 'string' && audio.data) {
+    const buf = Buffer.from(audio.data, 'base64');
+    if (buf.length) return buf;
+  }
+  // 少数情况下响应体直接就是音频二进制
+  return null;
+}
+
+/**
+ * 调用阿里云百炼 CosyVoice 合成语音。
+ * 做了两层容错：端点（Workspace 专用端点 / 标准 DashScope 端点）+ 音色（主音色 / 备用音色），
+ * 任一层失败都自动降级，避免阿里云接口调整或账号权限差异导致整个语音功能不可用。
+ */
+async function synthesizeWithAliyun(
+  text: string,
+  lang = 'zh-CN',
+  voice: TtsVoice = 'mommy',
+): Promise<Buffer | null> {
+  const apiKey = process.env.DASHSCOPE_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const cfg = ALIYUN_VOICE[voice] ?? ALIYUN_VOICE.mommy;
+  const cleanText = preprocessForAliyun(text);
+  const isZh = lang.startsWith('zh');
+  const endpoints = aliyunEndpoints();
+  const voices = [cfg.primary, cfg.fallback];
+
+  for (const ep of endpoints) {
+    for (const v of voices) {
+      try {
+        const res = await fetch(ep.url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(ep.buildBody(cleanText, v)),
+          signal: AbortSignal.timeout(60000),
+        });
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          console.warn(
+            `[TTS] 阿里云 ${ep.name}/${v} 失败 ${res.status}: ${body.slice(0, 200)}`,
+          );
+          // 401/403 是鉴权问题，换端点换音色都没用，直接放弃阿里云
+          if (res.status === 401 || res.status === 403) {
+            console.error('[TTS] 阿里云 API Key 无效或无权限，回退到 Edge TTS');
+            return null;
+          }
+          continue;
+        }
+
+        const ctype = res.headers.get('content-type') || '';
+        // SSE 流式：逐段拼接 base64 音频
+        if (ctype.includes('event-stream')) {
+          const raw = await res.text();
+          const chunks: string[] = [];
+          for (const line of raw.split('\n')) {
+            if (!line.startsWith('data:')) continue;
+            const json = line.slice(5).trim();
+            if (!json) continue;
+            try {
+              const parsed = JSON.parse(json) as { output?: { audio?: { data?: string } } };
+              const d = parsed?.output?.audio?.data;
+              if (typeof d === 'string') chunks.push(d);
+            } catch {
+              /* 忽略非 JSON 行 */
+            }
+          }
+          if (chunks.length) {
+            const buf = Buffer.from(chunks.join(''), 'base64');
+            if (buf.length) {
+              console.log(`[TTS] 阿里云 ${ep.name}/${v} 合成成功(${isZh ? '中' : '英'}): ${buf.length}B`);
+              return buf;
+            }
+          }
+          continue;
+        }
+
+        const payload: unknown = await res.json();
+        const buf = await extractAudio(payload);
+        if (buf) {
+          console.log(`[TTS] 阿里云 ${ep.name}/${v} 合成成功(${isZh ? '中' : '英'}): ${buf.length}B`);
+          return buf;
+        }
+        console.warn(`[TTS] 阿里云 ${ep.name}/${v} 返回无音频数据`);
+      } catch (err) {
+        console.warn(
+          `[TTS] 阿里云 ${ep.name}/${v} 异常:`,
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    }
+  }
+  return null;
 }
 
 async function synthesizeWithEdge(text: string, lang = 'zh-CN', voice: TtsVoice = 'mommy'): Promise<Buffer | null> {
@@ -154,8 +361,13 @@ async function synthesizeWithGTTS(text: string, lang = 'zh-CN'): Promise<Buffer 
   });
 }
 
-/** 调用 TTS 生成 MP3；网络不可用时返回 null */
+/**
+ * 调用 TTS 生成 MP3；全部引擎不可用时返回 null。
+ * 优先级：阿里云 CosyVoice（音色区分好）→ Edge TTS（免费）→ gTTS（最后兜底）
+ */
 export async function synthesize(text: string, lang = 'zh-CN', voice: TtsVoice = 'mommy'): Promise<Buffer | null> {
+  const aliyun = await synthesizeWithAliyun(text, lang, voice);
+  if (aliyun) return aliyun;
   const edge = await synthesizeWithEdge(text, lang, voice);
   if (edge) return edge;
   return synthesizeWithGTTS(text, lang);

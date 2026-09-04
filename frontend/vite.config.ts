@@ -6,8 +6,9 @@ import process from "process"
 
 // https://vite.dev/config/
 export default defineConfig({
-  // 阿里云部署在域名根路径（前后端同域名）；如需保留子路径改回 '/storybook/'
-  base: '/',
+  // 部署路径：默认根路径（阿里云同源部署，前后端共用一个域名）。
+  // 若还要部署到 GitHub Pages 子路径，构建时设 VITE_BASE_PATH=/storybook/ 即可。
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
