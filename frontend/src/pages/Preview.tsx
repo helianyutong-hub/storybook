@@ -171,10 +171,30 @@ export default function Preview() {
     }
 
     if (audioUrl) {
-      // 有 URL 了，但不在这里调 play()（已脱离手势上下文，微信必拦截）
-      // 直接显示「▶ 点击播放」按钮，让用户在手势内触发
-      setPendingPlayUrl(audioUrl);
-      setAudioError(null);
+      // 有 URL：先尝试在手势上下文内直接播放（大部分浏览器支持）
+      // 微信等会拦截自动播放，此时再降级为「点击播放」按钮
+      const audio = audioRef.current;
+      if (audio) {
+        audio.volume = story.params.volume;
+        audio.src = audioUrl;
+        audio.onended = () => setSpeaking(false);
+        audio.onerror = () => {
+          setSpeaking(false);
+          setAudioError('音频播放失败，请检查网络后重试');
+        };
+        const played = audio.play();
+        if (played !== undefined) {
+          played
+            .then(() => { setSpeaking(true); setPendingPlayUrl(null); })
+            .catch(() => {
+              // 浏览器拦截（微信常见）：显示「点击播放」让用户再点一次
+              if (audioUrl) setPendingPlayUrl(audioUrl);
+              setAudioError(null);
+            });
+        }
+      } else {
+        setPendingPlayUrl(audioUrl);
+      }
       return;
     }
 
@@ -231,11 +251,12 @@ export default function Preview() {
     setSpeaking(false);
     audioRef.current?.pause();
     toast.success('已重新生成故事文案');
-    // 预热语音（失败不影响阅读）
+    // 文案已生成完毕，按钮立即恢复（不等音频生成，音频后台静默跑）
+    setRegen(false);
+    // 后台预生成语音（失败不影响阅读体验）
     ensureStoryAudioUrls(updated)
       .then((urls) => updateDraft(story.id, { audioUrls: urls }))
-      .catch(() => {})
-      .finally(() => setRegen(false));
+      .catch(() => {});
   };
 
   const toggleBg = () => {

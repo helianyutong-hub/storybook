@@ -276,7 +276,23 @@ export default function Player() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, currentAudioUrl]);
 
-  // 离开页面清理
+  // 强制退出到预览页：优先用 React Router（SPA 体验好），失败则用 window.location 兜底（微信兼容）
+  const exitToPreview = () => {
+    try { audioRef.current?.pause(); } catch { /* ignore */ }
+    try { cancelSpeech(); } catch { /* ignore */ }
+    try { bg?.stop(); } catch { /* ignore */ }
+    wantPlayingRef.current = false;
+    setPlaying(false);
+    const target = story ? `/preview/${story.id}` : '/create';
+    nav(target);
+    // 微信浏览器里 React Router 的 navigate 有时不触发实际跳转，
+    // 延迟检查：如果 300ms 后还在播放页，用 window.location 强制跳
+    setTimeout(() => {
+      if (window.location.pathname !== target) {
+        window.location.href = target;
+      }
+    }, 300);
+  };
   useEffect(() => {
     return () => {
       import('@/lib/tts').then(({ cancelSpeech }) => cancelSpeech());
@@ -304,16 +320,18 @@ export default function Player() {
     }
   };
 
-  // 播放/暂停按钮：直接驱动 <audio>，playing 状态由音频真实事件决定，图标必然同步
+  // 播放/暂停按钮：直接驱动 <audio>，同时显式设置 playing 状态（微信浏览器 pause 事件不可靠时保底）
   const togglePlay = () => {
     bg?.resume();
     const audio = audioRef.current;
     if (!audio) return;
     if (!audio.paused) {
       wantPlayingRef.current = false;
+      setPlaying(false); // 显式切换图标（不单靠 pause 事件，微信可能不触发）
       audio.pause();
     } else {
       wantPlayingRef.current = true;
+      setPlaying(true); // 显式切换图标
       const url = currentAudioUrl;
       if (url && loadedUrlRef.current !== url) {
         audio.src = url;
@@ -322,6 +340,9 @@ export default function Player() {
       }
       audio.play().catch(() => {
         /* 微信自动播放限制：点击本身已是用户手势，通常可正常播放 */
+        // 播放失败时回退状态
+        setPlaying(false);
+        wantPlayingRef.current = false;
       });
     }
   };
@@ -362,14 +383,7 @@ export default function Player() {
 
       {/* 退出 */}
       <button
-        onClick={() => {
-          try { audioRef.current?.pause(); } catch { /* ignore */ }
-          try { cancelSpeech(); } catch { /* ignore */ }
-          try { bg?.stop(); } catch { /* ignore */ }
-          wantPlayingRef.current = false;
-          setPlaying(false);
-          nav(`/preview/${story.id}`);
-        }}
+        onClick={exitToPreview}
         className="absolute right-4 top-4 z-20 grid size-10 place-items-center rounded-full bg-black/30 text-white backdrop-blur"
         aria-label="退出播放"
       >
@@ -458,7 +472,7 @@ export default function Player() {
               <Button
                 variant="secondary"
                 className="rounded-full"
-                onClick={() => nav(`/preview/${story.id}`)}
+                onClick={exitToPreview}
               >
                 返回预览
               </Button>
