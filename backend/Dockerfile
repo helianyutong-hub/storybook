@@ -3,6 +3,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# npm 源，默认官方源（境外平台如 Render 直接用）。
+# 国内服务器（阿里云等）构建时加 --build-arg NPM_REGISTRY=https://registry.npmmirror.com 会快很多。
+# 用环境变量而不是命令行参数，npm 和 pnpm 都认，不存在参数不支持的问题。
+ARG NPM_REGISTRY=https://registry.npmjs.org
+ENV NPM_CONFIG_REGISTRY=$NPM_REGISTRY
+
 # 安装兼容 Node 20 的 pnpm 9（pnpm 10+ 依赖 node:sqlite，Node 20 不支持）
 RUN npm install -g pnpm@9.15.0
 
