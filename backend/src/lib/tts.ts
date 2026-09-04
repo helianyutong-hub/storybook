@@ -409,16 +409,25 @@ export async function generateStoryAudio(
   pages: { text: string }[],
   lang = 'zh-CN',
   voice: TtsVoice = 'mommy',
+  concurrency = 4,
 ): Promise<(string | null)[]> {
-  const results: (string | null)[] = [];
-  // 顺序生成，避免并发导致超时/限流；每页失败自动重试
-  for (const page of pages) {
-    try {
-      const url = await ensureAudioWithRetry(page.text, lang, 3, voice);
-      results.push(url);
-    } catch {
-      results.push(null);
+  const results: (string | null)[] = new Array(pages.length).fill(null);
+  let cursor = 0;
+  // 并发池：同时生成多页，整本耗时从「页数×单页」降到「批数×单页」。
+  // 并发数控制在 4，既明显提速又不易触发阿里云限流（单页失败仍会自动重试）。
+  async function worker() {
+    while (cursor < pages.length) {
+      const i = cursor++;
+      const text = pages[i].text;
+      if (!text.trim()) continue;
+      try {
+        results[i] = await ensureAudioWithRetry(text, lang, 3, voice);
+      } catch {
+        results[i] = null;
+      }
     }
   }
+  const poolSize = Math.min(concurrency, pages.length) || 1;
+  await Promise.all(Array.from({ length: poolSize }, () => worker()));
   return results;
 }

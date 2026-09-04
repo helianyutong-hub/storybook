@@ -15,10 +15,22 @@ import {
 import { PACE_RATE, Story } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { getBgSound } from '@/lib/bgSound';
-import { fetchStory, ensureStoryAudioUrls, getCachedAudioUrls } from '@/lib/api';
-import { isTTSAvailable } from '@/lib/tts';
+import { fetchStory, startStoryAudioJob, pollStoryAudioJob, getCachedAudioUrls } from '@/lib/api';
+import { cancelSpeech, isTTSAvailable } from '@/lib/tts';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+
+/** 把后端增量返回的 urls 合并进已有的 audioUrls（保留已有、补齐缺失的页） */
+function mergeAudioUrls(
+  prev: (string | null)[] | undefined,
+  incoming: (string | null)[],
+  total: number,
+): (string | null)[] {
+  const out: (string | null)[] = new Array(total).fill(null);
+  if (prev) for (let i = 0; i < Math.min(prev.length, total); i++) out[i] = prev[i] ?? null;
+  for (let i = 0; i < Math.min(incoming.length, total); i++) if (incoming[i]) out[i] = incoming[i];
+  return out;
+}
 
 export default function Player() {
   const { id } = useParams();
@@ -71,9 +83,9 @@ export default function Player() {
   }, [story, nav]);
 
   // ===== 核心优化：边播边生成模式 =====
-  // 1. 先从 localStorage 缓存读取（秒开）
-  // 2. 缓存有当前页音频 → 立即开始播放
-  // 3. 同时后台生成缺失页（不阻塞播放）
+  // 1. 先从 localStorage 缓存读取（秒开，见进入播放页的 effect）
+  // 2. 没有缓存时：启动后端任务，轮询进度；第 1 页音频一就绪就开播，
+  //    其余页在后台并发补齐（不再等整本 10 页全部生成完才出声）
   const generateAllAudio = useCallback(
     async (force = false) => {
       if (!story) return null;
@@ -85,14 +97,41 @@ export default function Player() {
       setAudioError(null);
       setAudioProgress({ done: 0, total: story.pages.length });
       try {
-        const urls = await ensureStoryAudioUrls(story, (p) => setAudioProgress(p));
-        const allOk = urls && urls.length === story.pages.length && urls.every(Boolean);
-        if (!allOk && !urls?.some(Boolean)) {
-          setAudioError('语音生成失败，请检查网络后重试');
+        const lang: 'zh' | 'en' = story.params.lang === 'en' ? 'en' : 'zh';
+        const jobId = await startStoryAudioJob(
+          story.pages.map((p) => p.text),
+          lang,
+          story.params.voice,
+        );
+        if (!jobId) throw new Error('无法创建语音生成任务');
+
+        let startedPlaying = false;
+        for (let i = 0; i < 300; i++) {
+          const data = await pollStoryAudioJob(jobId);
+          const incoming = Array.isArray(data.urls) ? data.urls : [];
+          if (incoming.length) {
+            setStory((s) =>
+              s ? { ...s, audioUrls: mergeAudioUrls(s.audioUrls, incoming, story.pages.length) } : s,
+            );
+            setAudioProgress({
+              done: Number(data.done || 0),
+              total: Number(data.total || story.pages.length),
+            });
+            // 第 1 页一就绪就开播，不等整本
+            if (!startedPlaying && incoming[0]) {
+              setPlaying(true);
+              startedPlaying = true;
+            }
+          }
+          if (data.status === 'done') break;
+          await new Promise((r) => setTimeout(r, 1200));
         }
-        setStory((s) => (s ? { ...s, audioUrls: urls } : s));
-        updateDraft(story.id, { audioUrls: urls });
-        return urls;
+        // 写回草稿，便于跨设备/二次回看
+        setStory((s) => {
+          if (s) updateDraft(story.id, { audioUrls: s.audioUrls });
+          return s;
+        });
+        return story.audioUrls;
       } catch (err) {
         const msg = err instanceof Error ? err.message : '网络请求失败';
         if (msg.includes('405')) {
@@ -109,7 +148,7 @@ export default function Player() {
     [story, updateDraft],
   );
 
-  // 进入播放页：缓存优先 → 有音频立即播，没有则后台生成
+  // 进入播放页：缓存优先 → 有音频立即播，没有则后台生成（第 1 页好即播）
   useEffect(() => {
     if (!story) return;
 
@@ -121,25 +160,13 @@ export default function Player() {
       updateDraft(story.id, { audioUrls: cached });
       setStory((s) => (s ? { ...s, audioUrls: cached } : s));
       if (allReady || cached[0]) {
-        // 第一页有音频就可以开始了
         setPlaying(true);
-        return;
       }
-      // 缓存部分命中：开始播 + 后台补剩余
-      if (cached.some(Boolean)) setPlaying(true);
+      return;
     }
 
-    // 第二步：缓存没命中或部分缺失，后台生成（不阻塞 UI）
-    void generateAllAudio().then((urls) => {
-      if (!urls) return;
-      // 只要第一页有音频就开始播放
-      if (urls[0]) {
-        setPlaying(true);
-      } else if (urls.some(Boolean)) {
-        // 第一页没有但其他页有，也尝试播放（会跳到有音频的页）
-        setPlaying(true);
-      }
-    });
+    // 第二步：缓存没命中或部分缺失，后台生成（第 1 页就绪即开播，不阻塞 UI）
+    void generateAllAudio();
   }, [story]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 当前页是否有服务端音频（提前声明，供下方解锁监听依赖使用）
@@ -309,20 +336,15 @@ export default function Player() {
     }
   };
 
-  // 播放/暂停按钮
+  // 播放/暂停按钮（暂停时立即 pause，不等 effect 清理时序，避免"点了没反应"）
   const togglePlay = () => {
     bg?.resume();
-    setPlaying((p) => {
-      const next = !p;
-      if (next && audioRef.current && currentAudioUrl) {
-        audioRef.current.src = currentAudioUrl;
-        audioRef.current.volume = volume;
-        audioRef.current.play().catch(() => {
-          /* 微信可能拦截，用户可再次点击播放按钮 */
-        });
-      }
-      return next;
-    });
+    if (playing) {
+      audioRef.current?.pause();
+      setPlaying(false);
+    } else {
+      setPlaying(true); // 真正的 play 由下方逐页朗读 effect 负责（已确保手势内调用）
+    }
   };
 
   if (!story) {
@@ -359,6 +381,9 @@ export default function Player() {
       {/* 退出 */}
       <button
         onClick={() => {
+          audioRef.current?.pause();
+          cancelSpeech();
+          bg?.stop();
           setPlaying(false);
           nav(`/preview/${story.id}`);
         }}
@@ -512,7 +537,7 @@ export default function Player() {
                 bgOn ? 'bg-primary/30 text-primary' : 'text-white/70'
               }`}
             >
-              背景音
+              音量
             </button>
           )}
         </div>

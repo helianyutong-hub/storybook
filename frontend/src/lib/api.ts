@@ -117,7 +117,7 @@ export interface AudioProgress {
 }
 
 /** 让后端为若干页文本启动一次语音生成任务（后端异步执行，返回任务 id） */
-async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en', voice?: VoiceRole): Promise<string> {
+export async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en', voice?: VoiceRole): Promise<string> {
   const locale = lang === 'en' ? 'en-US' : 'zh-CN';
   const { data } = await retryRequest<TtsJobResponse>(() =>
     apiClient.post('/tts/story', {
@@ -127,6 +127,26 @@ async function startStoryAudioJob(texts: string[], lang: 'zh' | 'en', voice?: Vo
     })
   );
   return data?.jobId ?? '';
+}
+
+/** 查询一次生成任务进度（不轮询），用于「边生成边播」：第 1 页好了就先播 */
+export async function pollStoryAudioJob(jobId: string): Promise<{
+  status: string;
+  done: number;
+  total: number;
+  urls: (string | null)[];
+}> {
+  try {
+    const { data } = await apiClient.get(`/tts/story/${jobId}`);
+    return {
+      status: String(data?.status ?? ''),
+      done: Number(data?.done ?? 0),
+      total: Number(data?.total ?? 0),
+      urls: Array.isArray(data?.urls) ? data.urls : [],
+    };
+  } catch {
+    return { status: '', done: 0, total: 0, urls: [] };
+  }
 }
 
 /**
