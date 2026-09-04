@@ -29,8 +29,8 @@ const ALIYUN_VOICE: Record<TtsVoice, { primary: string; fallback: string; label:
   daddy: { primary: 'longanyun_v3', fallback: 'longanzhi_v3', label: '居家暖男 30-35岁' },
   // 爷爷：60 岁以上男性，沧桑岁月
   grandpa: { primary: 'longlaobo_v3', fallback: 'longxiu_v3', label: '沧桑岁月爷 60岁以上' },
-  // 奶奶：60 岁以上女性，烟火从容
-  grandma: { primary: 'longlaoyi_v3', fallback: 'longyuan_v3', label: '烟火从容阿姨 60岁以上' },
+  // 奶奶：60 岁以上女性，慈祥老奶奶（龙老姨）
+  grandma: { primary: 'longlaoyi_v3', fallback: 'longyuan_v3', label: '慈祥老奶奶 60岁以上' },
 };
 
 // 注意：必须在运行时读取，不能写成模块级常量——
@@ -113,7 +113,13 @@ function ensureDir() {
 }
 
 function hashText(text: string, lang: string, voice: TtsVoice): string {
-  return crypto.createHash('sha256').update(`${lang}:${voice}:${text}`).digest('hex').slice(0, 32);
+  // 末尾的 'v2' 是缓存版本号：端点/音色映射/格式任一调整都必须 bump，
+  // 否则旧音频文件留在磁盘上，前端用同样的 hash 命中后听不到新声音。
+  return crypto
+    .createHash('sha256')
+    .update(`${lang}:${voice}:${text}::v2`)
+    .digest('hex')
+    .slice(0, 32);
 }
 
 export function audioFilePath(hash: string): string {
@@ -143,9 +149,9 @@ function preprocessForAliyun(text: string): string {
   return text.replace(/·/g, '，').slice(0, 2000);
 }
 
-/** 标准 DashScope 多模态端点（只需 API Key） */
+/** 阿里云百炼 SpeechSynthesizer 标准端点（语音合成专用，只需 API Key） */
 const DASHSCOPE_URL =
-  'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+  'https://dashscope.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer';
 
 /** CosyVoice 专用端点（需要百炼控制台的 WorkspaceId） */
 function workspaceUrl(): string | null {
@@ -156,7 +162,7 @@ function workspaceUrl(): string | null {
 type AliyunEndpoint = {
   name: string;
   url: string;
-  /** 按官方文档，两个端点的参数层级不同：Workspace 端点把音色放在 input 里 */
+  /** 按官方文档，音色字段必须在 input.voice 里（parameters.voice 阿里云会返回 400） */
   buildBody: (text: string, voice: string) => Record<string, unknown>;
 };
 
@@ -169,7 +175,8 @@ function aliyunEndpoints(): AliyunEndpoint[] {
       url: wsUrl,
       buildBody: (text, voice) => ({
         model: cosyvoiceModel(),
-        input: { text, voice, format: 'mp3', sample_rate: 24000 },
+        input: { text, voice },
+        parameters: { format: 'mp3', sample_rate: 24000 },
       }),
     });
   }
@@ -178,8 +185,8 @@ function aliyunEndpoints(): AliyunEndpoint[] {
     url: DASHSCOPE_URL,
     buildBody: (text, voice) => ({
       model: cosyvoiceModel(),
-      input: { text },
-      parameters: { voice, format: 'mp3', sample_rate: 24000 },
+      input: { text, voice },
+      parameters: { format: 'mp3', sample_rate: 24000 },
     }),
   });
   return list;
@@ -229,69 +236,79 @@ async function synthesizeWithAliyun(
 
   for (const ep of endpoints) {
     for (const v of voices) {
-      try {
-        const res = await fetch(ep.url, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(ep.buildBody(cleanText, v)),
-          signal: AbortSignal.timeout(60000),
-        });
+      let buf: Buffer | null = null;
+      // 同一音色最多重试 3 次：429 限流 / 400（阿里云常把瞬时限流包装成 url error）退避后重试，
+      // 不要立刻跳到兜底音色，否则会丢掉爸爸/妈妈/爷爷/奶奶的角色区分度。
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(ep.url, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(ep.buildBody(cleanText, v)),
+            signal: AbortSignal.timeout(60000),
+          });
 
-        if (!res.ok) {
-          const body = await res.text().catch(() => '');
+          if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            console.warn(
+              `[TTS] 阿里云 ${ep.name}/${v} 失败 ${res.status}: ${body.slice(0, 200)}`,
+            );
+            // 401/403 是鉴权问题，换端点换音色都没用，直接放弃阿里云
+            if (res.status === 401 || res.status === 403) {
+              console.error('[TTS] 阿里云 API Key 无效或无权限，回退到 Edge TTS');
+              return null;
+            }
+            // 429/400：退避后重试同一音色
+            if (attempt < 2) {
+              await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+              continue;
+            }
+            break; // 3 次仍失败，换下一个音色
+          }
+
+          const ctype = res.headers.get('content-type') || '';
+          // SSE 流式：逐段拼接 base64 音频
+          if (ctype.includes('event-stream')) {
+            const raw = await res.text();
+            const chunks: string[] = [];
+            for (const line of raw.split('\n')) {
+              if (!line.startsWith('data:')) continue;
+              const json = line.slice(5).trim();
+              if (!json) continue;
+              try {
+                const parsed = JSON.parse(json) as { output?: { audio?: { data?: string } } };
+                const d = parsed?.output?.audio?.data;
+                if (typeof d === 'string') chunks.push(d);
+              } catch {
+                /* 忽略非 JSON 行 */
+              }
+            }
+            if (chunks.length) {
+              const b = Buffer.from(chunks.join(''), 'base64');
+              if (b.length) buf = b;
+            }
+          } else {
+            const payload: unknown = await res.json();
+            buf = await extractAudio(payload);
+          }
+        } catch (err) {
           console.warn(
-            `[TTS] 阿里云 ${ep.name}/${v} 失败 ${res.status}: ${body.slice(0, 200)}`,
+            `[TTS] 阿里云 ${ep.name}/${v} 异常:`,
+            err instanceof Error ? err.message : String(err),
           );
-          // 401/403 是鉴权问题，换端点换音色都没用，直接放弃阿里云
-          if (res.status === 401 || res.status === 403) {
-            console.error('[TTS] 阿里云 API Key 无效或无权限，回退到 Edge TTS');
-            return null;
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
           }
-          continue;
         }
-
-        const ctype = res.headers.get('content-type') || '';
-        // SSE 流式：逐段拼接 base64 音频
-        if (ctype.includes('event-stream')) {
-          const raw = await res.text();
-          const chunks: string[] = [];
-          for (const line of raw.split('\n')) {
-            if (!line.startsWith('data:')) continue;
-            const json = line.slice(5).trim();
-            if (!json) continue;
-            try {
-              const parsed = JSON.parse(json) as { output?: { audio?: { data?: string } } };
-              const d = parsed?.output?.audio?.data;
-              if (typeof d === 'string') chunks.push(d);
-            } catch {
-              /* 忽略非 JSON 行 */
-            }
-          }
-          if (chunks.length) {
-            const buf = Buffer.from(chunks.join(''), 'base64');
-            if (buf.length) {
-              console.log(`[TTS] 阿里云 ${ep.name}/${v} 合成成功(${isZh ? '中' : '英'}): ${buf.length}B`);
-              return buf;
-            }
-          }
-          continue;
-        }
-
-        const payload: unknown = await res.json();
-        const buf = await extractAudio(payload);
-        if (buf) {
-          console.log(`[TTS] 阿里云 ${ep.name}/${v} 合成成功(${isZh ? '中' : '英'}): ${buf.length}B`);
-          return buf;
-        }
-        console.warn(`[TTS] 阿里云 ${ep.name}/${v} 返回无音频数据`);
-      } catch (err) {
-        console.warn(
-          `[TTS] 阿里云 ${ep.name}/${v} 异常:`,
-          err instanceof Error ? err.message : String(err),
-        );
+        if (buf && buf.length) break;
+      }
+      if (buf && buf.length) {
+        console.log(`[TTS] 阿里云 ${ep.name}/${v} 合成成功(${isZh ? '中' : '英'}): ${buf.length}B`);
+        return buf;
       }
     }
   }

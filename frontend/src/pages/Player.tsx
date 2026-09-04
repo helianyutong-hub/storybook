@@ -12,11 +12,11 @@ import {
   RotateCcw,
   Loader2,
 } from 'lucide-react';
-import { PACE_RATE, Story } from '@/types/story';
+import { Story } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { getBgSound } from '@/lib/bgSound';
 import { fetchStory, startStoryAudioJob, pollStoryAudioJob, getCachedAudioUrls } from '@/lib/api';
-import { cancelSpeech, isTTSAvailable } from '@/lib/tts';
+import { cancelSpeech } from '@/lib/tts';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
@@ -51,6 +51,13 @@ export default function Player() {
   const [audioMode, setAudioMode] = useState<'none' | 'mp3' | 'speech'>('none');
   /** 每一页因加载失败而重新生成语音的次数，用于限制自动重试、避免死循环 */
   const reloadTried = useRef<Record<number, number>>({});
+  /** 用户期望的播放状态：暂停后再播时为 true（避免在 audio 加载完成前被 React 覆盖） */
+  const wantPlayingRef = useRef(false);
+  /** 当前 <audio> 已加载的 src，用于判断是否需要重新设置 src（续播不重置） */
+  const loadedUrlRef = useRef<string | null>(null);
+  /** 事件回调里读到最新 page / last（避免 effect 闭包过期） */
+  const pageRef = useRef(0);
+  const lastRef = useRef(0);
   /** 语音相关的错误提示 */
   const [audioError, setAudioError] = useState<string | null>(null);
 
@@ -174,139 +181,100 @@ export default function Player() {
 
   const last = story ? story.pages.length - 1 : 0;
 
-  // 背景音随播放状态开关（等语音真正就绪后才启动，不和语音抢戏）
+  // 背景音：由「打开环境音」按钮控制开关（bgOn 状态），仅在语音播放中且有需要时响起
   useEffect(() => {
     if (!bg || !story) return;
-    // 只有在「语音已就绪且正在播放」时才开背景音，避免语音还没出来背景音先响了
     const audioReady = audioMode === 'mp3' || audioMode === 'speech';
-    if (playing && audioReady && story.params.bgSound !== 'none') {
+    if (playing && audioReady && bgOn && story.params.bgSound !== 'none') {
       bg.play(story.params.bgSound, volume * 0.5);
-      setBgOn(true);
     } else {
       bg.stop();
-      setBgOn(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, audioMode]);
+  }, [playing, audioMode, bgOn]);
 
-  // 逐页朗读 / 播放
+  // 逐页朗读：用音频元素的真实 play / pause / ended 事件驱动 playing 状态，
+  // 保证「播放/暂停图标」与实际声音严格同步；暂停后再次播放从断点续播（不重载音频）。
+  // 把最新的 page / last 同步到 ref，供一次性绑定的事件回调读取。
+  pageRef.current = page;
+  lastRef.current = last;
+
   useEffect(() => {
-    if (!playing || !story) return;
-    const s = story;
-    let cancelled = false;
-
-    if (currentAudioUrl) {
-      setAudioMode('mp3');
-      const audio = audioRef.current;
-      if (audio) {
-        audio.volume = volume;
-        audio.src = currentAudioUrl;
-        audio.load();
-        audio
-          .play()
-          .then(() => {})
-          .catch(() => {
-            /* 微信可能拦截自动播放，用户可点击中间播放按钮手动触发 */
-          });
-        audio.oncanplay = null;
-        const onEnd = () => {
-          if (cancelled) return;
-          if (page < last) {
-            setPage((p) => Math.min(last, p + 1));
-          } else {
-            setFinished(true);
-            setPlaying(false);
-          }
-        };
-        audio.onended = onEnd;
-        audio.onerror = () => {
-          if (cancelled) return;
-          // 音频加载失败：微信不支持浏览器语音，回退等于静音。
-          // 改为重新生成这一页语音（最多自动重试 2 次），实在不行再提示用户轻点。
-          if (isTTSAvailable()) {
-            setAudioMode('speech');
-            playSpeech();
-            return;
-          }
-          const tries = reloadTried.current[page] ?? 0;
-          if (tries >= 2) {
-            return;
-          }
-          reloadTried.current[page] = tries + 1;
-          setAudioMode('none');
-          setPlaying(false);
-          void generateAllAudio(true).then((urls) => {
-            if (cancelled) return;
-            if (urls?.[page]) setPlaying(true);
-          });
-        };
-      }
-    } else {
-      // 当前页还没有音频（可能还在后台生成中）
-      // 策略：等 2 秒再检查一次（边播边生成模式下，后台可能刚生成完）
-      // 如果生成已完成且仍无音频，跳到下一页
-      const retryTimer = setTimeout(() => {
-        if (cancelled) return;
-        // 重新检查当前 story 状态（后台可能已更新 audioUrls）
-        const updatedUrl = story.audioUrls?.[page] || getCachedAudioUrls(story.id)?.[page];
-        if (updatedUrl) {
-          // 音频已经好了，触发重新播放（通过切换 page 触发 effect 重新执行）
-          setPage(page); // 同一个值也会触发 re-render + effect 重跑
-          return;
-        }
-        // 还是没有：尝试找下一页有音频的
-        if (page < last) {
-          setPage((p) => Math.min(last, p + 1));
-        } else {
-          // 最后一页都没音频，停止播放
-          if (!story.audioUrls?.some(Boolean)) {
-            setAudioError('语音生成失败，请检查网络后点击重试');
-          }
-          setFinished(true);
-          setPlaying(false);
-        }
-      }, 2000);
-
-      // 标记为等待中
-      setAudioMode('none');
-
-      return () => {
-        clearTimeout(retryTimer);
-      };
-    }
-
-    function playSpeech() {
-      // 浏览器原生语音（微信内置浏览器不支持，仅作兜底）
-      import('@/lib/tts').then(({ speak }) => {
-        speak(s.pages[page].text, {
-          rate: PACE_RATE[s.params.pace],
-          volume,
-          voiceRole: s.params.voice,
-          onEnd: () => {
-            if (cancelled) return;
-            if (page < last) {
-              setTimeout(() => !cancelled && setPage((p) => Math.min(last, p + 1)), 700);
-            } else {
-              setFinished(true);
-              setPlaying(false);
-            }
-          },
-        });
-      });
-    }
-
-    return () => {
-      cancelled = true;
-      import('@/lib/tts').then(({ cancelSpeech }) => cancelSpeech());
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.onended = null;
-        audioRef.current.onerror = null;
-        audioRef.current.oncanplay = null;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    const onEnded = () => {
+      const p = pageRef.current;
+      if (p < lastRef.current) {
+        setPage((x) => Math.min(lastRef.current, x + 1));
+      } else {
+        setFinished(true);
+        wantPlayingRef.current = false;
+        setPlaying(false);
       }
     };
+    const onError = () => {
+      // 当前页音频加载失败：多半是旧缓存被清空后 404，自动重新生成这一页（最多 2 次）
+      const p = pageRef.current;
+      const tries = reloadTried.current[p] ?? 0;
+      if (tries < 2 && story) {
+        reloadTried.current[p] = tries + 1;
+        wantPlayingRef.current = true;
+        void generateAllAudio(true);
+      } else if (!audioError) {
+        setAudioError('这一页语音加载失败，请返回预览页重试');
+      }
+    };
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+    return () => {
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, page, currentAudioUrl]);
+  }, []);
+
+  // 加载并播放当前页：仅当 page 或音频 URL 变化时才执行。
+  // 续播时不重新设置 src，从而保留 currentTime，从暂停处继续播放。
+  useEffect(() => {
+    if (!story) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const url = currentAudioUrl;
+    if (!url) {
+      // 当前页音频还没生成好：保持等待态，后台生成完会自动补齐并触发本 effect
+      setAudioMode('none');
+      // 生成已结束但本页仍缺失：补生成一次，避免卡在「准备中」
+      if (!audioGen) {
+        const tried = reloadTried.current[page] ?? 0;
+        if (tried < 1) {
+          reloadTried.current[page] = tried + 1;
+          wantPlayingRef.current = true;
+          void generateAllAudio(true);
+        } else if (!audioError) {
+          setAudioError('这一页语音生成失败，请返回预览页重试');
+        }
+      }
+      return;
+    }
+    setAudioMode('mp3');
+    if (loadedUrlRef.current !== url) {
+      audio.src = url;
+      loadedUrlRef.current = url;
+      audio.load();
+    }
+    if (wantPlayingRef.current) {
+      audio.play().catch(() => {
+        /* 微信可能拦截无手势的自动播放，用户点击中间播放按钮即可手动触发 */
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, currentAudioUrl]);
 
   // 离开页面清理
   useEffect(() => {
@@ -336,14 +304,25 @@ export default function Player() {
     }
   };
 
-  // 播放/暂停按钮（暂停时立即 pause，不等 effect 清理时序，避免"点了没反应"）
+  // 播放/暂停按钮：直接驱动 <audio>，playing 状态由音频真实事件决定，图标必然同步
   const togglePlay = () => {
     bg?.resume();
-    if (playing) {
-      audioRef.current?.pause();
-      setPlaying(false);
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused) {
+      wantPlayingRef.current = false;
+      audio.pause();
     } else {
-      setPlaying(true); // 真正的 play 由下方逐页朗读 effect 负责（已确保手势内调用）
+      wantPlayingRef.current = true;
+      const url = currentAudioUrl;
+      if (url && loadedUrlRef.current !== url) {
+        audio.src = url;
+        loadedUrlRef.current = url;
+        audio.load();
+      }
+      audio.play().catch(() => {
+        /* 微信自动播放限制：点击本身已是用户手势，通常可正常播放 */
+      });
     }
   };
 
@@ -355,12 +334,15 @@ export default function Player() {
     setFinished(false);
     setPage(0);
     setPlaying(true);
+    wantPlayingRef.current = true;
     const firstAudioUrl = story.audioUrls?.[0];
-    if (audioRef.current && firstAudioUrl) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = firstAudioUrl;
-      audioRef.current.volume = volume;
-      audioRef.current.play().catch(() => {
+    const audio = audioRef.current;
+    if (audio && firstAudioUrl) {
+      loadedUrlRef.current = firstAudioUrl;
+      audio.currentTime = 0;
+      audio.src = firstAudioUrl;
+      audio.volume = volume;
+      audio.play().catch(() => {
         /* ignore */
       });
     }
@@ -381,9 +363,10 @@ export default function Player() {
       {/* 退出 */}
       <button
         onClick={() => {
-          audioRef.current?.pause();
-          cancelSpeech();
-          bg?.stop();
+          try { audioRef.current?.pause(); } catch { /* ignore */ }
+          try { cancelSpeech(); } catch { /* ignore */ }
+          try { bg?.stop(); } catch { /* ignore */ }
+          wantPlayingRef.current = false;
           setPlaying(false);
           nav(`/preview/${story.id}`);
         }}
@@ -424,7 +407,7 @@ export default function Player() {
         )}
 
         {/* 音频还在加载/生成中：显示等待提示 */}
-        {playing && audioMode === 'none' && !audioGen && !audioError && (
+        {!currentAudioUrl && !audioGen && !audioError && (
           <div className="mt-6 flex max-w-sm flex-col items-center gap-1.5 rounded-2xl bg-black/30 px-5 py-3 text-center backdrop-blur">
             <p className="flex items-center gap-2 text-sm font-semibold text-white/80">
               <Loader2 className="size-4 animate-spin" /> 语音准备中…
@@ -537,7 +520,7 @@ export default function Player() {
                 bgOn ? 'bg-primary/30 text-primary' : 'text-white/70'
               }`}
             >
-              音量
+              {bgOn ? '关闭环境音' : '打开环境音'}
             </button>
           )}
         </div>
