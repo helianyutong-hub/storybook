@@ -58,6 +58,8 @@ export default function Player() {
   /** 事件回调里读到最新 page / last（避免 effect 闭包过期） */
   const pageRef = useRef(0);
   const lastRef = useRef(0);
+  /** 用户主动点击暂停的锁：防止微信浏览器 onPlay 事件或加载 effect 在 pause() 之后又把 playing 设回 true */
+  const pausedByUserRef = useRef(false);
   /** 语音相关的错误提示 */
   const [audioError, setAudioError] = useState<string | null>(null);
 
@@ -202,7 +204,11 @@ export default function Player() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const onPlay = () => setPlaying(true);
+    const onPlay = () => {
+      // 用户主动暂停过：不自动恢复播放状态，等用户再点播放
+      if (pausedByUserRef.current) return;
+      setPlaying(true);
+    };
     const onPause = () => setPlaying(false);
     const onEnded = () => {
       const p = pageRef.current;
@@ -268,7 +274,7 @@ export default function Player() {
       loadedUrlRef.current = url;
       audio.load();
     }
-    if (wantPlayingRef.current) {
+    if (wantPlayingRef.current && !pausedByUserRef.current) {
       audio.play().catch(() => {
         /* 微信可能拦截无手势的自动播放，用户点击中间播放按钮即可手动触发 */
       });
@@ -276,22 +282,18 @@ export default function Player() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, currentAudioUrl]);
 
-  // 强制退出到预览页：优先用 React Router（SPA 体验好），失败则用 window.location 兜底（微信兼容）
+  // 强制退出到预览页：微信浏览器里 React Router 不可靠，直接用 window.location 跳转
   const exitToPreview = () => {
+    // 先停掉一切声音和状态
     try { audioRef.current?.pause(); } catch { /* ignore */ }
     try { cancelSpeech(); } catch { /* ignore */ }
     try { bg?.stop(); } catch { /* ignore */ }
     wantPlayingRef.current = false;
+    pausedByUserRef.current = false;
     setPlaying(false);
     const target = story ? `/preview/${story.id}` : '/create';
-    nav(target);
-    // 微信浏览器里 React Router 的 navigate 有时不触发实际跳转，
-    // 延迟检查：如果 300ms 后还在播放页，用 window.location 强制跳
-    setTimeout(() => {
-      if (window.location.pathname !== target) {
-        window.location.href = target;
-      }
-    }, 300);
+    // 微信兼容：window.location 是最可靠的跳转方式，SPA nav 经常失效
+    window.location.href = target;
   };
   useEffect(() => {
     return () => {
@@ -320,18 +322,22 @@ export default function Player() {
     }
   };
 
-  // 播放/暂停按钮：直接驱动 <audio>，同时显式设置 playing 状态（微信浏览器 pause 事件不可靠时保底）
+  // 播放/暂停按钮：直接驱动 <audio>，同时显式设置 playing 状态 + 暂停锁（微信浏览器事件不可靠时保底）
   const togglePlay = () => {
     bg?.resume();
     const audio = audioRef.current;
     if (!audio) return;
     if (!audio.paused) {
+      // 用户主动暂停
       wantPlayingRef.current = false;
-      setPlaying(false); // 显式切换图标（不单靠 pause 事件，微信可能不触发）
+      pausedByUserRef.current = true;  // 加锁：防止 onPlay/loading effect 自动恢复
+      setPlaying(false);              // 显式切换图标为 ▶
       audio.pause();
     } else {
+      // 用户主动播放：清除暂停锁
+      pausedByUserRef.current = false;
       wantPlayingRef.current = true;
-      setPlaying(true); // 显式切换图标
+      setPlaying(true);               // 显式切换图标为 ⏸
       const url = currentAudioUrl;
       if (url && loadedUrlRef.current !== url) {
         audio.src = url;
@@ -356,6 +362,7 @@ export default function Player() {
     setPage(0);
     setPlaying(true);
     wantPlayingRef.current = true;
+    pausedByUserRef.current = false;
     const firstAudioUrl = story.audioUrls?.[0];
     const audio = audioRef.current;
     if (audio && firstAudioUrl) {
