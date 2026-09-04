@@ -459,6 +459,11 @@ export default function Player() {
             />
           ))}
         </div>
+        {!finished && (
+          <p className="mt-2 text-center text-xs text-white/60">
+            {playing ? '播放中' : currentAudioUrl ? '已暂停' : '准备中'}
+          </p>
+        )}
 
         {finished ? (
           <div className="flex flex-col items-center gap-3">

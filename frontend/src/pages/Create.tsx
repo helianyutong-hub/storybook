@@ -14,7 +14,6 @@ import {
   Baby,
   Wand2,
   Globe,
-  Mic,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -24,14 +23,11 @@ import {
   Pace,
   BgSound,
   SoothingTone,
-  VoiceRole,
   DURATION_LABELS,
   PACE_LABELS,
   BG_SOUND_LABELS,
   TONE_LABELS,
   LANG_LABELS,
-  VOICE_LABELS,
-  VOICE_HINTS,
 } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { Button } from '@/components/ui/button';
@@ -206,25 +202,9 @@ export default function Create() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="mb-1.5 flex items-center gap-1 text-sm font-semibold">
-                <Mic className="size-4 text-primary" /> 朗读音色
-              </label>
-              <Segmented<VoiceRole>
-                value={params.voice}
-                onChange={(v) => set('voice', v)}
-                columns={4}
-                options={[
-                  { value: 'daddy', label: VOICE_LABELS.daddy },
-                  { value: 'mommy', label: VOICE_LABELS.mommy },
-                  { value: 'grandpa', label: VOICE_LABELS.grandpa },
-                  { value: 'grandma', label: VOICE_LABELS.grandma },
-                ]}
-              />
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {VOICE_HINTS[params.voice]}
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              故事默认用温柔的女生声音朗读 🎀
+            </p>
             <div>
               <div className="mb-1.5 flex items-center justify-between text-sm">
                 <span className="font-semibold">朗读音量</span>

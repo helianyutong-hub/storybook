@@ -31,10 +31,13 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        // 本地没有后端时（后端部署在阿里云），默认把 /api 代理到线上后端，
+        // 这样直接 `npm run dev` 就能连真实后端联调预览。
+        // 若本机起了后端(:3000)，用 VITE_PROXY_TARGET=http://localhost:3000 npm run dev 覆盖。
+        target: process.env.VITE_PROXY_TARGET || 'https://lm.lzei.cn',
         changeOrigin: true,
-        secure: false,
-        ws: true
+        secure: true,
+        ws: true,
       },
     },
   },
