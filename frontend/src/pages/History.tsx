@@ -58,6 +58,7 @@ export default function History() {
    * 用 React 状态 + 自定义确认条实现，避免 window.confirm 在微信 X5 内核被劫持成「关闭网页」。
    */
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   /** 本地草稿即为历史（按内容去重、只留最新一条，再按创建时间倒序）；登录与否都不影响查看 */
   const items = useMemo(() => {
@@ -72,11 +73,29 @@ export default function History() {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [drafts]);
 
-  const startDelete = (id: string) => setConfirmDeleteId(id);
-  const cancelDelete = () => setConfirmDeleteId(null);
-  const confirmDelete = (id: string) => {
+  const startDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setConfirmDeleteId(id);
+  };
+  const cancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setConfirmDeleteId(null);
+  };
+  const confirmDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const target = drafts[id];
+    if (!target) {
+      setConfirmDeleteId(null);
+      toast.error('故事不存在或已删除');
+      return;
+    }
+    setDeletingId(id);
     removeDraft(id);
     setConfirmDeleteId(null);
+    setDeletingId(null);
     toast.success('已删除');
   };
 
@@ -111,7 +130,16 @@ export default function History() {
               key={s.id}
               className="group rounded-3xl border border-white/10 bg-card/50 p-4 transition-colors hover:bg-card"
             >
-              <button className="block w-full text-left" onClick={() => nav(`/preview/${s.id}`)}>
+              <button
+                className="block w-full text-left"
+                onClick={() => {
+                  if (confirmDeleteId === s.id) {
+                    setConfirmDeleteId(null);
+                    return;
+                  }
+                  nav(`/preview/${s.id}`);
+                }}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-bold">{s.title}</h3>
                   {!s.approved && (
@@ -139,7 +167,10 @@ export default function History() {
               </button>
               {confirmDeleteId === s.id ? (
                 // 二次确认条：避免 window.confirm 在微信浏览器被劫持成「关闭网页」
-                <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-destructive/30 bg-destructive/[0.08] px-3 py-2 text-xs">
+                <div
+                  className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-destructive/30 bg-destructive/[0.08] px-3 py-2 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <span className="font-medium text-destructive">确定删除这个故事吗？</span>
                   <div className="flex gap-1">
                     <Button
@@ -153,9 +184,10 @@ export default function History() {
                     <Button
                       size="sm"
                       className="h-7 rounded-full bg-destructive px-3 text-xs text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => confirmDelete(s.id)}
+                      disabled={deletingId === s.id}
+                      onClick={(e) => confirmDelete(e, s.id)}
                     >
-                      删除
+                      {deletingId === s.id ? '删除中…' : '删除'}
                     </Button>
                   </div>
                 </div>
@@ -165,7 +197,8 @@ export default function History() {
                     variant="ghost"
                     size="sm"
                     className="rounded-full text-destructive hover:bg-destructive/10"
-                    onClick={() => startDelete(s.id)}
+                    disabled={deletingId === s.id}
+                    onClick={(e) => startDelete(e, s.id)}
                   >
                     <Trash2 className="size-3.5" /> 删除
                   </Button>
