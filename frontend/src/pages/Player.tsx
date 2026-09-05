@@ -72,6 +72,8 @@ export default function Player() {
   const [shareOpen, setShareOpen] = useState(false);
   /** 复制链接后短暂打勾 */
   const [copied, setCopied] = useState(false);
+  /** 是否显示"快速跳转页码"浮层 */
+  const [jumpOpen, setJumpOpen] = useState(false);
 
   const bg = useMemo(() => (story ? getBgSound() : null), [story]);
 
@@ -393,6 +395,18 @@ export default function Player() {
     }
   };
 
+  /** 快速跳转到任意页（保持当前播放/暂停意图） */
+  const jumpToPage = (idx: number) => {
+    if (!story || idx === page || idx < 0 || idx > last) return;
+    audioRef.current?.pause();
+    setFinished(false);
+    setJumpOpen(false);
+    setPage(idx);
+    // 如果用户之前是主动暂停状态，跳转后仍保持暂停；
+    // 否则 wantPlayingRef 会驱动 effect 在新页音频就绪后继续播放
+    wantPlayingRef.current = !pausedByUserRef.current;
+  };
+
   const totalPages = audioProgress.total || story.pages.length;
   const donePages = Math.min(audioProgress.done, totalPages);
 
@@ -526,7 +540,13 @@ export default function Player() {
       {/* 控制条 */}
       <div className="relative z-10 mx-auto mb-6 w-full max-w-xl px-5">
         <div className="mb-3 flex items-center justify-center gap-1 text-xs text-white/70">
-          第 {page + 1} / {story.pages.length} 页
+          <button
+            onClick={() => setJumpOpen(true)}
+            className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 hover:bg-white/20"
+            aria-label="快速跳转页码"
+          >
+            第 {page + 1} / {story.pages.length} 页
+          </button>
           {audioMode === 'mp3' && <span className="ml-1 text-primary">· 云端语音</span>}
           {audioMode === 'speech' && <span className="ml-1 text-white/50">· 浏览器语音</span>}
           {audioMode === 'none' && !audioGen && (
@@ -538,13 +558,15 @@ export default function Player() {
             </span>
           )}
         </div>
-        <div className="mb-4 flex items-center justify-center gap-2">
+        <div className="mb-4 flex items-center justify-center gap-2 px-2">
           {Array.from({ length: story.pages.length }).map((_, i) => (
-            <span
+            <button
               key={i}
+              onClick={() => jumpToPage(i)}
               className={`h-1.5 rounded-full transition-all ${
-                i === page ? 'w-6 bg-primary' : 'w-1.5 bg-white/30'
+                i === page ? 'w-6 bg-primary' : 'w-1.5 bg-white/30 hover:bg-white/50'
               }`}
+              aria-label={`跳转到第 ${i + 1} 页`}
             />
           ))}
         </div>
@@ -681,6 +703,47 @@ export default function Player() {
             <p className="mt-3 text-xs text-gray-500">
               微信内如未弹出分享面板，可直接「复制链接」后粘贴到聊天发给好友。
             </p>
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {/* 快速跳转页码浮层：点页码文字或进度条触发，支持直接跳首页/末页/任意页 */}
+      {jumpOpen && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center" onClick={() => setJumpOpen(false)}>
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">跳到任意一页</h3>
+              <button onClick={() => setJumpOpen(false)} className="rounded-full p-1 text-gray-500 hover:bg-gray-100" aria-label="关闭">
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="mb-4 grid grid-cols-5 gap-2">
+              {Array.from({ length: story.pages.length }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => jumpToPage(i)}
+                  className={`rounded-xl py-2.5 text-sm font-semibold transition-colors ${
+                    i === page
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 rounded-full" onClick={() => jumpToPage(0)}>
+                第一页
+              </Button>
+              <Button variant="secondary" className="flex-1 rounded-full" onClick={() => jumpToPage(last)}>
+                最后一页
+              </Button>
+            </div>
           </div>
         </div>,
         document.body,

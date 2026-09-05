@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History as HistoryIcon, Plus, Trash2, Moon, Music, Clock } from 'lucide-react';
+import { History as HistoryIcon, Plus, Trash2, Moon, Music, Clock, Share2, Copy, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Story, StorySummary, TONE_LABELS, BG_SOUND_LABELS } from '@/types/story';
 import { useApp } from '@/store/AppStore';
 import { Button } from '@/components/ui/button';
+import { savePublicStory } from '@/lib/api';
 
 function fmt(iso: string) {
   try {
@@ -50,6 +51,14 @@ function storyContentKey(s: Story): string {
   ].join('|');
 }
 
+/** 构造故事分享完整链接（适配 GitHub Pages 子路径或根路径部署） */
+function buildShareUrl(storyId: string): string {
+  if (typeof window === 'undefined') return '';
+  const base = window.location.origin;
+  const sub = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+  return `${base}${sub}/preview/${storyId}`;
+}
+
 export default function History() {
   const nav = useNavigate();
   const { drafts, removeDraft } = useApp();
@@ -59,6 +68,12 @@ export default function History() {
    */
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  /** 当前正在展示分享条的卡片 id */
+  const [shareStoryId, setShareStoryId] = useState<string | null>(null);
+  /** 当前正在上传分享/复制链接的卡片 id */
+  const [sharingId, setSharingId] = useState<string | null>(null);
+  /** 复制成功后短暂提示的卡片 id */
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   /** 本地草稿即为历史（按内容去重、只留最新一条，再按创建时间倒序）；登录与否都不影响查看 */
   const items = useMemo(() => {
@@ -73,9 +88,22 @@ export default function History() {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [drafts]);
 
+  const startShare = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setConfirmDeleteId(null); // 展开分享时关闭删除确认
+    setShareStoryId(id);
+  };
+  const closeShare = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    setShareStoryId(null);
+  };
+
   const startDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     e.preventDefault();
+    setShareStoryId(null); // 展开删除确认时关闭分享条
     setConfirmDeleteId(id);
   };
   const cancelDelete = (e: React.MouseEvent) => {
@@ -97,6 +125,78 @@ export default function History() {
     setConfirmDeleteId(null);
     setDeletingId(null);
     toast.success('已删除');
+  };
+
+  /** 确保故事已上传到公开分享区 */
+  const ensureShared = async (id: string): Promise<boolean> => {
+    const full = drafts[id];
+    if (!full) {
+      toast.error('故事不存在或已删除');
+      return false;
+    }
+    try {
+      await savePublicStory(full);
+      return true;
+    } catch {
+      toast.error('分享上传失败，请稍后重试');
+      return false;
+    }
+  };
+
+  /** 复制分享链接 */
+  const copyShareLink = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSharingId(id);
+    const ok = await ensureShared(id);
+    setSharingId(null);
+    if (!ok) return;
+    const url = buildShareUrl(id);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedId(id);
+      toast.success('链接已复制，去微信发给好友吧');
+      setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 1800);
+    } catch {
+      toast.error('复制失败，请长按链接手动复制');
+    }
+  };
+
+  /** 调用系统分享，不支持则落回复制链接 */
+  const shareToFriend = async (e: React.MouseEvent, id: string, title: string, childName: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSharingId(id);
+    const ok = await ensureShared(id);
+    setSharingId(null);
+    if (!ok) return;
+    const url = buildShareUrl(id);
+    const shareData: ShareData = {
+      title,
+      text: `宝宝专属睡前故事：${title}（${childName || '宝宝'}）`,
+      url,
+    };
+    if (typeof navigator !== 'undefined' && 'share' in navigator && navigator.canShare?.(shareData) !== false) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        /* 用户取消或不支持，落回复制 */
+      }
+    }
+    await copyShareLink(e, id);
   };
 
   return (
@@ -135,6 +235,10 @@ export default function History() {
                 onClick={() => {
                   if (confirmDeleteId === s.id) {
                     setConfirmDeleteId(null);
+                    return;
+                  }
+                  if (shareStoryId === s.id) {
+                    setShareStoryId(null);
                     return;
                   }
                   nav(`/preview/${s.id}`);
@@ -191,8 +295,65 @@ export default function History() {
                     </Button>
                   </div>
                 </div>
+              ) : shareStoryId === s.id ? (
+                // 分享条：上传公开分享区 + 复制链接/系统分享
+                <div
+                  className="mt-3 rounded-2xl border border-primary/30 bg-primary/[0.08] px-3 py-2 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="font-medium text-primary">分享给好友</span>
+                    <button
+                      onClick={(e) => closeShare(e)}
+                      className="rounded-full p-1 text-muted-foreground hover:bg-white/5"
+                      aria-label="关闭"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                  <div className="mb-2 break-all rounded-lg bg-white/5 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+                    {buildShareUrl(s.id)}
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 flex-1 rounded-full text-primary hover:bg-primary/10"
+                      disabled={sharingId === s.id}
+                      onClick={(e) => copyShareLink(e, s.id)}
+                    >
+                      {copiedId === s.id ? (
+                        <>
+                          <Check className="size-3.5" /> 已复制
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3.5" /> 复制链接
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 flex-1 rounded-full text-primary hover:bg-primary/10"
+                      disabled={sharingId === s.id}
+                      onClick={(e) => shareToFriend(e, s.id, s.title, s.childName)}
+                    >
+                      <Share2 className="size-3.5" /> 转发
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <div className="mt-3 flex justify-end">
+                <div className="mt-3 flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-primary hover:bg-primary/10"
+                    disabled={deletingId === s.id}
+                    onClick={(e) => startShare(e, s.id)}
+                  >
+                    <Share2 className="size-3.5" /> 分享
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
