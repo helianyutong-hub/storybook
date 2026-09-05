@@ -35,9 +35,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [captchaOk, setCaptchaOk] = useState(false);
   const [captchaReset, setCaptchaReset] = useState(0);
+  const [phoneTouched, setPhoneTouched] = useState(false);
 
   // 严格校验中国大陆手机号号段，避免 11111111111 这类假号走到后端
   const phoneOk = /^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$/.test(phone.trim());
+  const phoneError = phoneTouched && phone.length > 0 && !phoneOk;
   const pwdOk = password.length >= 6 && password.length <= 20;
   const pwdMatch = password === password2;
 
@@ -48,7 +50,7 @@ export default function Login() {
 
   /** 密码登录（账号 + 密码 + 人机验证） */
   const doPasswordLogin = async () => {
-    if (!phoneOk) return toast.error('请输入有效的手机号');
+    if (!phoneOk) return toast.error('请输入正确的手机号');
     if (!password) return toast.error('请输入密码');
     if (!captchaOk) return toast.error('请先拖动滑块完成人机验证');
     setLoading(true);
@@ -68,7 +70,7 @@ export default function Login() {
 
   /** 注册（手机号 + 设密码 + 人机验证） */
   const doRegister = async () => {
-    if (!phoneOk) return toast.error('请输入有效的手机号');
+    if (!phoneOk) return toast.error('请输入正确的手机号');
     if (!pwdOk) return toast.error('密码需要 6-20 位');
     if (!pwdMatch) return toast.error('两次输入的密码不一致');
     if (!captchaOk) return toast.error('请先拖动滑块完成人机验证');
@@ -140,12 +142,18 @@ export default function Login() {
         <Input
           value={phone}
           onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-          onBlur={probePhone}
+          onBlur={() => {
+            setPhoneTouched(true);
+            probePhone();
+          }}
           placeholder="11 位手机号"
           inputMode="numeric"
           maxLength={11}
-          className="rounded-2xl bg-white/[0.04]"
+          className={`rounded-2xl bg-white/[0.04] ${phoneError ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
         />
+        {phoneError && (
+          <p className="mt-1.5 text-sm text-red-400">请输入正确的手机号</p>
+        )}
 
         {/* 密码 */}
         <label className="mb-1.5 mt-4 block text-sm font-semibold">

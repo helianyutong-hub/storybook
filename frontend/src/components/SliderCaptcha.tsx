@@ -16,8 +16,8 @@ interface Props {
  * 不依赖任何第三方验证码服务，零成本、可离线工作。
  *
  * 修复点：
- * 1. 拖动期间在 window 上监听 pointermove/pointerup，避免滑块脱手后事件丢失
- * 2. pointercancel / 失焦时自动兜底处理
+ * 1. pointerdown 时直接在 window 绑定 move/up，不依赖 state/ref 触发 effect 重订阅
+ * 2. 阻止默认行为并加 user-select/touch-callout:none，避免移动端长按触发选择/菜单
  * 3. touch-action: none 防止微信/移动端拖动时页面跟着滚动
  */
 export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
@@ -25,9 +25,6 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
   const [trackW, setTrackW] = useState(0);
   const [pos, setPos] = useState(0); // 滑块左偏移（px）
   const [verified, setVerified] = useState(false);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const startPos = useRef(0);
 
   // 测量轨道宽度（含窗口缩放）
   useEffect(() => {
@@ -44,7 +41,6 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
   useEffect(() => {
     setPos(0);
     setVerified(false);
-    dragging.current = false;
   }, [resetKey]);
 
   const max = Math.max(0, trackW - KNOB);
@@ -60,49 +56,40 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
       setVerified(false);
       onVerify?.(false);
     }
-    dragging.current = false;
   };
 
-  // 全局拖动：在 window 上监听，避免按钮脱手后收不到事件
-  useEffect(() => {
-    if (!dragging.current) return;
+  const onDown = (e: React.PointerEvent) => {
+    if (verified) return;
+    // 阻止长按出现文本选择、菜单、缩放等默认行为
+    e.preventDefault();
 
-    const onMove = (e: PointerEvent) => {
-      if (!dragging.current) return;
-      const dx = e.clientX - startX.current;
-      let p = startPos.current + dx;
+    const startX = e.clientX;
+    const startPos = pos;
+
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      let p = startPos + dx;
       p = Math.max(0, Math.min(max, p));
       setPos(p);
     };
 
-    const onUp = (e: PointerEvent) => {
-      if (!dragging.current) return;
-      const dx = e.clientX - startX.current;
-      let p = startPos.current + dx;
+    const onUp = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      let p = startPos + dx;
       p = Math.max(0, Math.min(max, p));
       commit(p);
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
     };
 
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
-    };
-  }, [dragging.current, max]);
-
-  const onDown = (e: React.PointerEvent) => {
-    if (verified) return;
-    dragging.current = true;
-    startX.current = e.clientX;
-    startPos.current = pos;
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      /* 忽略：没有指针捕获也能靠 window 监听继续拖动 */
-    }
   };
 
   return (
@@ -111,6 +98,7 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
       className={`relative h-11 w-full select-none overflow-hidden rounded-2xl border text-sm transition-colors ${
         verified ? 'border-green-400/40 bg-green-400/10' : 'border-white/10 bg-white/[0.04]'
       }`}
+      style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'none' }}
     >
       {/* 提示文字（被滑块/高亮盖在下面也没关系，pointer-events-none） */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
@@ -129,10 +117,16 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
       <button
         type="button"
         onPointerDown={onDown}
-        className={`absolute left-0 top-0 grid size-11 touch-none place-items-center rounded-2xl shadow transition-colors ${
+        className={`absolute left-0 top-0 grid size-11 place-items-center rounded-2xl shadow transition-colors ${
           verified ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
         }`}
-        style={{ transform: `translateX(${pos}px)`, touchAction: 'none' }}
+        style={{
+          transform: `translateX(${pos}px)`,
+          touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+        }}
         aria-label="拖动滑块完成人机验证"
       >
         {verified ? <Check className="size-5" /> : <ChevronsRight className="size-5" />}
