@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { scryptSync, randomBytes, timingSafeEqual } from 'crypto';
 
 function findDataDir(): string {
   const candidates = [
@@ -35,6 +36,8 @@ export interface User {
   name: string;
   method: 'phone' | 'wechat';
   identifier: string;
+  /** scrypt 加盐哈希（格式 salt:hash），仅密码注册/设置过的用户才有 */
+  passwordHash?: string;
 }
 
 export interface StoredStory {
@@ -112,6 +115,80 @@ export function findOrCreateUser(method: 'phone' | 'wechat', identifier: string,
     db.users.push(user);
     write(db);
   }
+  return user;
+}
+
+// ---------- 密码（scrypt 加盐哈希，绝不明文存储） ----------
+const SCRYPT_KEYLEN = 64;
+
+/** 生成 scrypt 哈希，格式 `salt:hash` */
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const hash = scryptSync(password, salt, SCRYPT_KEYLEN).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+/** 校验密码（用 timingSafeEqual 防时序侧信道） */
+export function verifyPassword(password: string, stored?: string): boolean {
+  if (!stored) return false;
+  const [salt, hash] = stored.split(':');
+  if (!salt || !hash) return false;
+  try {
+    const computed = scryptSync(password, salt, SCRYPT_KEYLEN);
+    const expected = Buffer.from(hash, 'hex');
+    if (computed.length !== expected.length) return false;
+    return timingSafeEqual(computed, expected);
+  } catch {
+    return false;
+  }
+}
+
+/** 按手机号查找用户（method='phone'） */
+export function findUserByPhone(phone: string): User | null {
+  const db = read();
+  return db.users.find((u) => u.method === 'phone' && u.identifier === phone) ?? null;
+}
+
+/**
+ * 注册：手机号 + 密码。
+ * 手机号已存在时：若从未设过密码 → 补设密码（视为老用户升级）；否则抛错（已注册）。
+ */
+export function registerWithPassword(
+  phone: string,
+  password: string,
+  name?: string,
+): { user: User; upgraded: boolean } {
+  const db = read();
+  const existing = db.users.find((u) => u.method === 'phone' && u.identifier === phone);
+  if (existing) {
+    if (existing.passwordHash) {
+      throw new Error('该手机号已注册，请直接用密码登录');
+    }
+    // 老用户（此前用验证码登录过）→ 补设密码
+    existing.passwordHash = hashPassword(password);
+    if (name) existing.name = name;
+    write(db);
+    return { user: existing, upgraded: true };
+  }
+  const user: User = {
+    id: crypto.randomUUID(),
+    name: name || randomNickname(),
+    method: 'phone',
+    identifier: phone,
+    passwordHash: hashPassword(password),
+  };
+  db.users.push(user);
+  write(db);
+  return { user, upgraded: false };
+}
+
+/** 设置 / 修改密码（需登录，调用前应已鉴权） */
+export function setUserPassword(userId: string, password: string): User {
+  const db = read();
+  const user = db.users.find((u) => u.id === userId);
+  if (!user) throw new Error('用户不存在');
+  user.passwordHash = hashPassword(password);
+  write(db);
   return user;
 }
 

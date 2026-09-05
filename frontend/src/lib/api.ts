@@ -46,15 +46,29 @@ export async function login(
   identifier: string,
   name?: string,
   code?: string,
+  /** 'code'=验证码登录（默认）；'password'=账号密码登录 */
+  mode: 'code' | 'password' = 'code',
+  password?: string,
 ): Promise<LoginResult> {
   try {
-    const { data } = await apiClient.post('/auth/login', { method, identifier, name, code });
+    const { data } = await apiClient.post('/auth/login', {
+      method,
+      identifier,
+      name,
+      code,
+      mode,
+      password,
+    });
     return data;
   } catch (err) {
-    // 验证码错误/过期等业务错误要如实抛给用户（不能吞掉走模拟登录）
+    // 验证码/密码错误等业务错误要如实抛给用户（不能吞掉走模拟登录）
     if (err && typeof err === 'object' && 'response' in err) {
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
       if (msg) throw new Error(msg);
+    }
+    // 密码登录必须走后端校验，不能降级为模拟登录（否则等于免密）
+    if (mode === 'password') {
+      throw new Error('登录服务暂时不可用，请稍后再试');
     }
     // 后端不可用时（纯静态部署 / 本地无后端），走本地模拟登录
     const displayName = name ?? (method === 'phone' ? `用户${identifier.slice(-4)}` : identifier);
@@ -65,13 +79,45 @@ export async function login(
   }
 }
 
-/** 登录方式配置：后端是否已启用真实短信验证码（未启用则前端展示演示模式提示） */
-export async function fetchAuthConfig(): Promise<{ smsEnabled: boolean }> {
+/** 注册账号（手机号 + 密码）。返回 upgraded=true 表示老用户补设了密码 */
+export async function registerWithPassword(
+  phone: string,
+  password: string,
+  name?: string,
+  code?: string,
+): Promise<LoginResult & { upgraded?: boolean }> {
+  const { data } = await apiClient.post('/auth/register', { phone, password, name, code });
+  return data;
+}
+
+/** 查询手机号是否已注册 / 是否设过密码 */
+export async function checkPhone(
+  phone: string,
+): Promise<{ exists: boolean; hasPassword: boolean }> {
   try {
-    const { data } = await apiClient.get('/auth/config');
+    const { data } = await apiClient.get('/auth/check', { params: { phone } });
     return data;
   } catch {
-    return { smsEnabled: false };
+    return { exists: false, hasPassword: false };
+  }
+}
+
+/** 设置 / 修改密码（需登录；验证码登录过的老用户可借此补设密码） */
+export async function setPassword(password: string): Promise<void> {
+  const { data } = await apiClient.post('/auth/password', { password });
+  return data;
+}
+
+/** 登录方式配置：后端是否已启用真实短信验证码（未启用则前端展示演示模式提示） */
+export async function fetchAuthConfig(): Promise<{
+  smsEnabled: boolean;
+  passwordEnabled: boolean;
+}> {
+  try {
+    const { data } = await apiClient.get('/auth/config');
+    return { smsEnabled: !!data.smsEnabled, passwordEnabled: data.passwordEnabled !== false };
+  } catch {
+    return { smsEnabled: false, passwordEnabled: true };
   }
 }
 

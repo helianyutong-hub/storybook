@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, LogOut, Phone, MessageCircle, Moon, Pencil, Check, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  User,
+  LogOut,
+  Phone,
+  MessageCircle,
+  Moon,
+  Pencil,
+  Check,
+  X,
+  Lock,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useApp } from '@/store/AppStore';
-import { fetchMe, updateUserName } from '@/lib/api';
+import { fetchMe, updateUserName, setPassword } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuthUser } from '@/types/story';
@@ -16,6 +27,11 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
+  /** 密码设置状态 */
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [pwd, setPwd] = useState('');
+  const [pwd2, setPwd2] = useState('');
+  const [savingPwd, setSavingPwd] = useState(false);
 
   useEffect(() => {
     // 自动拉取最新用户信息（昵称等）
@@ -64,6 +80,31 @@ export default function Profile() {
       toast.error(msg || '昵称保存失败，请稍后再试');
     } finally {
       setSavingName(false);
+    }
+  };
+
+  /** 设置 / 修改密码：之后即可用「手机号 + 密码」免费登录，不用再发短信 */
+  const savePwd = async () => {
+    if (pwd.length < 6 || pwd.length > 20) {
+      toast.error('密码需要 6-20 位');
+      return;
+    }
+    if (pwd !== pwd2) {
+      toast.error('两次输入的密码不一致');
+      return;
+    }
+    setSavingPwd(true);
+    try {
+      await setPassword(pwd);
+      toast.success('密码已设置，下次可用手机号 + 密码登录');
+      setPwdOpen(false);
+      setPwd('');
+      setPwd2('');
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || '密码设置失败，请稍后再试');
+    } finally {
+      setSavingPwd(false);
     }
   };
 
@@ -156,6 +197,61 @@ export default function Profile() {
               <p className="text-xs text-muted-foreground">故事同步</p>
               <p className="text-sm font-semibold">已开启云端历史同步</p>
             </div>
+          </div>
+
+          {/* 登录密码：设置后可用「手机号 + 密码」登录，不花短信费 */}
+          <div className="rounded-2xl bg-white/[0.04] px-4 py-3">
+            <button
+              className="flex w-full items-center gap-3 text-left"
+              onClick={() => setPwdOpen((v) => !v)}
+            >
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/5 text-primary">
+                <Lock className="size-4" />
+              </span>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">登录密码</p>
+                <p className="text-sm font-semibold">
+                  {pwdOpen ? '设置后可用密码登录' : '设置密码（之后登录不花短信费）'}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-primary">
+                {pwdOpen ? '收起' : '去设置'}
+              </span>
+            </button>
+
+            {pwdOpen && (
+              <div className="mt-3 space-y-2">
+                <Input
+                  value={pwd}
+                  onChange={(e) => setPwd(e.target.value)}
+                  placeholder="6-20 位新密码"
+                  type="password"
+                  maxLength={20}
+                  autoComplete="new-password"
+                  className="rounded-2xl bg-white/[0.04]"
+                />
+                <Input
+                  value={pwd2}
+                  onChange={(e) => setPwd2(e.target.value)}
+                  placeholder="再输入一次"
+                  type="password"
+                  maxLength={20}
+                  autoComplete="new-password"
+                  className="rounded-2xl bg-white/[0.04]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') savePwd();
+                    if (e.key === 'Escape') setPwdOpen(false);
+                  }}
+                />
+                <Button
+                  className="w-full rounded-2xl"
+                  onClick={savePwd}
+                  disabled={savingPwd || !pwd || !pwd2}
+                >
+                  {savingPwd ? '保存中…' : '保存密码'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
