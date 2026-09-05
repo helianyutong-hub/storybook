@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Sparkles,
@@ -68,7 +69,7 @@ export default function Create() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-16 pt-6 sm:px-6">
+    <div className="mx-auto max-w-2xl px-4 pb-40 pt-6 sm:px-6">
       <div className="mb-6 text-center">
         <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
           <Wand2 className="size-3.5" /> 第 1 步 · 填写哄睡偏好
@@ -258,19 +259,33 @@ export default function Create() {
         </Card>
       </div>
 
-      <div className="mt-8 flex flex-col gap-3">
-        <Button
-          size="lg"
-          disabled={!canGenerate}
-          onClick={submit}
-          className="h-14 rounded-full bg-primary text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
-        >
-          <Sparkles className="size-5" /> 一键生成故事
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          生成约 1 分钟内完成 · 生成后需家长预览确认，才会进入播放
-        </p>
-      </div>
+      {/* 一键生成故事 — 用 Portal 挂到 body，始终吸底，避免被 PageTransition 的 transform 绑架 */}
+      {createPortal(
+        <div className="fixed inset-x-0 bottom-0 z-50">
+          <div className="mx-auto max-w-2xl px-4 pb-[env(safe-area-inset-bottom)] pt-2 sm:px-6">
+            <Card className="border-primary/30 bg-card/95 shadow-2xl backdrop-blur-md">
+              <CardContent className="space-y-2.5 p-3.5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <Button
+                    size="lg"
+                    disabled={!canGenerate}
+                    onClick={submit}
+                    className="h-12 w-full shrink-0 rounded-full bg-primary text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform active:scale-[0.98] sm:h-14 sm:flex-1"
+                  >
+                    <Sparkles className="size-5" /> 一键生成故事
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground sm:text-left sm:leading-tight">
+                    生成约 1 分钟内完成
+                    <br className="hidden sm:block" />
+                    生成后需家长预览确认，才会进入播放
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

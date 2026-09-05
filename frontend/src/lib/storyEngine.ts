@@ -132,11 +132,13 @@ const TEMPLATES: Record<StoryLang, Record<Beat, { text: string[]; scene: string[
     },
     meet: {
       text: [
+        // 任务预告放第一位：用户重新生成后第一眼就能看到主线（去哪帮谁做什么）
+        '夜里有一件温柔的小任务等着{name}和{char}：{quest}正需要帮忙，就在{place}。{name}眼睛一亮，牵着{char}的手说：“我们这就去帮帮它。”',
         '门轻轻推开，{char}踮着脚走过来，在{name}床边坐下。它把毛茸茸的手放在{name}手心里，小声说：“别怕，我陪你。”',
         '{char}从窗边飘来，带着一点点月光的气息。它歪着头看{name}，眼里满是温柔：“今晚睡不着吧？那我们去做件温柔的事。”',
         '一只{char}悄悄探出脑袋，笑眯眯地凑近{name}。它轻轻拍了拍枕头，好像在说：“来，我们慢慢来，今天有任务哦。”',
       ],
-      scene: ['角色来到床边陪伴', '角色带着月光气息出现', '角色拍拍枕头，温柔靠近'],
+      scene: ['伙伴预告今夜要去帮忙的小任务', '角色来到床边陪伴', '角色带着月光气息出现', '角色拍拍枕头，温柔靠近'],
     },
     setoff: {
       text: [
@@ -260,20 +262,28 @@ const TEMPLATES: Record<StoryLang, Record<Beat, { text: string[]; scene: string[
   },
 };
 
-const TITLE_TEMPLATES: Record<StoryLang, string[]> = {
+const TITLE_TEMPLATES: Record<StoryLang, { quest?: boolean; text: string }[]> = {
   zh: [
-    '{name}和{char}的晚安小任务',
-    '{name}的星空小冒险',
-    '{char}陪{name}寻光记',
-    '{name}的月亮小船',
-    '给{name}的温柔晚安',
+    { quest: true, text: '帮{quest}的夜' },
+    { quest: true, text: '{name}的{place}小任务' },
+    { quest: true, text: '{char}和{name}去找{quest}' },
+    { quest: true, text: '在{place}帮{quest}' },
+    { text: '{name}和{char}的晚安小任务' },
+    { text: '{name}的星空小冒险' },
+    { text: '{char}陪{name}寻光记' },
+    { text: '{name}的月亮小船' },
+    { text: '给{name}的温柔晚安' },
   ],
   en: [
-    '{name} and {char}’s Bedtime Task',
-    '{name}’s Starry Little Adventure',
-    '{char} and {name}’s Quest for Light',
-    '{name}’s Little Moon Boat',
-    'A Tender Good Night for {name}',
+    { quest: true, text: 'A Night to Help {quest}' },
+    { quest: true, text: '{name}’s Little Task at {place}' },
+    { quest: true, text: '{char} and {name} Look for {quest}' },
+    { quest: true, text: 'Helping {quest} at {place}' },
+    { text: '{name} and {char}’s Bedtime Task' },
+    { text: '{name}’s Starry Little Adventure' },
+    { text: '{char} and {name}’s Quest for Light' },
+    { text: '{name}’s Little Moon Boat' },
+    { text: 'A Tender Good Night for {name}' },
   ],
 };
 
@@ -418,7 +428,7 @@ export function generateStory(input: StoryParams, nonce = 0): Story {
     };
   });
 
-  const title = makeTitle(rng, p);
+  const title = makeTitle(rng, p, episodes[0]?.quest ?? '', episodes[0]?.place ?? '');
 
   return {
     id:
@@ -433,13 +443,28 @@ export function generateStory(input: StoryParams, nonce = 0): Story {
   };
 }
 
-function makeTitle(rng: Rng, p: StoryParams): string {
+function makeTitle(
+  rng: Rng,
+  p: StoryParams,
+  quest: string = '',
+  place: string = '',
+): string {
   const lang = p.lang;
   const name = (p.childName ?? '').trim() || (lang === 'en' ? 'little one' : '宝宝');
   const picked =
     p.characters && p.characters.length ? rng.pick(p.characters) : lang === 'en' ? 'a little bear' : '小熊';
   const char = lang === 'en' ? CHAR_EN[picked] ?? 'a little friend' : picked;
-  return fill(rng.pick(TITLE_TEMPLATES[lang]), name, char);
+
+  // 优先抽“带 quest 标记”的标题 (能点明主线任务)；只有 quest 为空才陈列出另外三条作 fallback
+  const list = TITLE_TEMPLATES[lang];
+  const withQuest = quest ? list.filter(x => x.quest) : [];
+  let chosen: { quest?: boolean; text: string };
+  if (withQuest.length) {
+    chosen = rng.pick(withQuest);
+  } else {
+    chosen = rng.pick(list.filter(x => !x.quest));
+  }
+  return fill(chosen.text, name, char, quest, place);
 }
 
 /** 重新生成故事文案：保留原有插画与页数，仅替换文本与场景（小任务/地点也会换新，文案更不同） */

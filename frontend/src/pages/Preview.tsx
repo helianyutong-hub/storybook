@@ -342,7 +342,7 @@ export default function Preview() {
               {regen ? '生成中…' : '重新生成文案'}
             </Button>
           </div>
-          <div className="space-y-5">
+          <div className="max-h-[55vh] overflow-y-auto space-y-5 pr-1">
             {story.pages.map((pg, i) => (
               <div key={pg.id} className="border-b border-white/5 pb-4 last:border-0 last:pb-0">
                 <p className="mb-1.5 text-xs font-semibold text-primary">第 {i + 1} 页</p>
