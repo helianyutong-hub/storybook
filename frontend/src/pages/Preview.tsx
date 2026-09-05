@@ -283,6 +283,8 @@ export default function Preview() {
     const newPages = regenerateStoryText(story);
     const updated = { ...story, pages: newPages, audioUrls: [] as (string | null)[] };
     updateDraft(story.id, { pages: newPages, audioUrls: [] });
+    // 关键：同步更新本地 story 状态，页面才会立即刷新文案（否则只写 store，UI 不重渲染）
+    setStory(updated);
     // 文案变了，旧音频失效，清除缓存
     invalidateAudioCache(story.id);
     setSpeaking(false);
@@ -290,10 +292,7 @@ export default function Preview() {
     toast.success('已重新生成故事文案');
     // 文案已生成完毕，按钮立即恢复（不等音频生成，音频后台静默跑）
     setRegen(false);
-    // 后台预生成语音（失败不影响阅读体验）
-    ensureStoryAudioUrls(updated)
-      .then((urls) => updateDraft(story.id, { audioUrls: urls }))
-      .catch(() => {});
+    // 后台音频由下方 [story] 的 effect 自动触发（setStory 已让 story 变化）
   };
 
   const toggleBg = () => {
@@ -330,11 +329,6 @@ export default function Preview() {
         <div>
           <p className="text-xs font-semibold text-primary">第 2 步 · 家长预览审核</p>
           <h1 className="text-xl font-extrabold sm:text-2xl">{story.title}</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="rounded-full" onClick={() => nav('/create', { state: { params: story.params } })}>
-            <Wand2 className="size-4" /> 调整参数
-          </Button>
         </div>
       </div>
 
@@ -486,13 +480,23 @@ export default function Preview() {
                     我已检查故事内容，确认适合 {story.params.childName || '宝宝'} 睡前聆听。
                   </span>
                 </label>
-                <Button
-                  onClick={goPlay}
-                  disabled={!agreed}
-                  className="h-11 w-full rounded-full bg-primary text-base font-bold text-primary-foreground md:h-12"
-                >
-                  <Sparkles className="size-5" /> 确认播放给孩子
-                </Button>
+                {/* 操作按钮：手机端上下叠、PC 端并排；「调整参数」次级外观，确认播放主按钮 */}
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-stretch">
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full rounded-full sm:h-12 sm:w-auto sm:shrink-0 sm:px-5"
+                    onClick={() => nav('/create', { state: { params: story.params } })}
+                  >
+                    <Wand2 className="size-4" /> 调整参数
+                  </Button>
+                  <Button
+                    onClick={goPlay}
+                    disabled={!agreed}
+                    className="h-11 w-full rounded-full bg-primary text-base font-bold text-primary-foreground sm:h-12 sm:flex-1"
+                  >
+                    <Sparkles className="size-5" /> 确认播放给孩子
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

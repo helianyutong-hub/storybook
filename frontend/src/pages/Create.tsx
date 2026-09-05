@@ -5,9 +5,7 @@ import {
   Clock,
   Gauge,
   Volume2,
-  Droplets,
   Waves,
-  Wind,
   Heart,
   Music,
   Leaf,
@@ -49,7 +47,7 @@ export default function Create() {
     duration: incoming?.duration ?? lastParams.duration ?? 'medium',
     pace: incoming?.pace ?? lastParams.pace ?? 'slow',
     volume: incoming?.volume ?? lastParams.volume ?? 0.8,
-    bgSound: incoming?.bgSound ?? lastParams.bgSound ?? 'rain',
+    bgSound: incoming?.bgSound ?? lastParams.bgSound ?? 'music',
     soothing: incoming?.soothing ?? lastParams.soothing ?? 70,
     tone: incoming?.tone ?? lastParams.tone ?? 'gentle',
     lang: incoming?.lang ?? lastParams.lang ?? 'zh',
@@ -229,9 +227,7 @@ export default function Create() {
                 columns={3}
                 options={[
                   { value: 'none', label: BG_SOUND_LABELS.none, icon: <Leaf className="size-4" /> },
-                  { value: 'rain', label: BG_SOUND_LABELS.rain, icon: <Droplets className="size-4" /> },
                   { value: 'waves', label: BG_SOUND_LABELS.waves, icon: <Waves className="size-4" /> },
-                  { value: 'wind', label: BG_SOUND_LABELS.wind, icon: <Wind className="size-4" /> },
                   { value: 'heartbeat', label: BG_SOUND_LABELS.heartbeat, icon: <Heart className="size-4" /> },
                   { value: 'music', label: BG_SOUND_LABELS.music, icon: <Music className="size-4" /> },
                 ]}

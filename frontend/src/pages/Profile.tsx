@@ -211,11 +211,11 @@ export default function Profile() {
               <div className="flex-1">
                 <p className="text-xs text-muted-foreground">登录密码</p>
                 <p className="text-sm font-semibold">
-                  {pwdOpen ? '设置后可用密码登录' : '设置密码（之后登录不花短信费）'}
+                  {pwdOpen ? '修改密码' : '修改密码'}
                 </p>
               </div>
               <span className="shrink-0 text-xs font-semibold text-primary">
-                {pwdOpen ? '收起' : '去设置'}
+                {pwdOpen ? '收起' : '去修改'}
               </span>
             </button>
 
@@ -248,7 +248,7 @@ export default function Profile() {
                   onClick={savePwd}
                   disabled={savingPwd || !pwd || !pwd2}
                 >
-                  {savingPwd ? '保存中…' : '保存密码'}
+                  {savingPwd ? '保存中…' : '保存修改'}
                 </Button>
               </div>
             )}
