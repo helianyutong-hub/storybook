@@ -45,6 +45,21 @@ export interface StoryParams {
   voice: VoiceRole;
 }
 
+/** 插画里「小伙伴」的可识别动物/形象种类（用于按文案角色画对应 SVG） */
+export type AnimalKind =
+  | 'bear'
+  | 'bunny'
+  | 'duck'
+  | 'cat'
+  | 'deer'
+  | 'star'
+  | 'moon'
+  | 'cloud'
+  | 'whale'
+  | 'fox'
+  | 'tree'
+  | 'firefly';
+
 /** 单页插画规格（由故事引擎生成，喂给插画生成器） */
 export interface IllustrationSpec {
   /** 随机种子，保证同一页插画稳定 */
@@ -57,6 +72,8 @@ export interface IllustrationSpec {
   mood: SoothingTone;
   /** 是否包含孩子形象 */
   hasChild: boolean;
+  /** 小伙伴的动物/形象种类；不传则按 elements 启发式猜测 */
+  friendKind?: AnimalKind;
 }
 
 /** 故事单页 */

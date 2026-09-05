@@ -13,6 +13,7 @@ import {
   SoothingTone,
   Palette,
   IllustrationSpec,
+  AnimalKind,
 } from '@/types/story';
 
 type Beat = 'open' | 'meet' | 'setoff' | 'discover' | 'help' | 'resolve' | 'calm' | 'sleep';
@@ -31,6 +32,22 @@ const CHAR_EN: Record<string, string> = {
   小狐狸: 'a little fox',
   大树爷爷: 'Old Tree',
   萤火虫: 'a firefly',
+};
+
+// 角色 → 插画里「小伙伴」的动物/形象种类（让 SVG 和文案对得上）
+const CHAR_TO_KIND: Record<string, AnimalKind> = {
+  小熊: 'bear',
+  小兔: 'bunny',
+  小鸭子: 'duck',
+  小猫咪: 'cat',
+  小鹿: 'deer',
+  小星星: 'star',
+  月亮婆婆: 'moon',
+  云朵宝宝: 'cloud',
+  小鲸鱼: 'whale',
+  小狐狸: 'fox',
+  大树爷爷: 'tree',
+  萤火虫: 'firefly',
 };
 
 // 不同基调的形容词池（中文叙事用）
@@ -379,6 +396,8 @@ function buildPage(
     elements: Array.from(new Set(elements)),
     mood: p.tone,
     hasChild: beat !== 'open' || rng.chance(0.3),
+    // 让「小伙伴」画成 picked 角色对应的动物（而不是默认的圆头小熊）
+    friendKind: CHAR_TO_KIND[picked] ?? 'bear',
   };
 
   return { text, scene, illustration };
@@ -589,7 +608,34 @@ function makeIllustrationForLLM(
     elements: Array.from(elements),
     mood: p.tone,
     hasChild: idx === 0 ? rng.chance(0.4) : true,
+    // 优先从 characters 里选一个角色映射；scene 里提到具体动物时也认
+    friendKind: pickFriendKind(t, p.characters),
   };
+}
+
+// 从 scene 文案 / 用户选的角色里识别动物：先看场景文案关键词，否则从用户角色中随机抽一个
+function pickFriendKind(sceneText: string, characters: string[]): AnimalKind {
+  const s = sceneText || '';
+  if (/小鹿|梅花鹿|鹿/.test(s)) return 'deer';
+  if (/小兔|兔子|长耳朵/.test(s)) return 'bunny';
+  if (/小熊|小熊熊/.test(s)) return 'bear';
+  if (/小狐狸|狐狸/.test(s)) return 'fox';
+  if (/小猫咪|小猫|猫咪/.test(s)) return 'cat';
+  if (/小鸭|鸭子|鸭鸭/.test(s)) return 'duck';
+  if (/小鲸|鲸鱼/.test(s)) return 'whale';
+  if (/小星星|星星/.test(s)) return 'star';
+  if (/月亮婆婆|月亮/.test(s)) return 'moon';
+  if (/云朵宝宝|云朵/.test(s)) return 'cloud';
+  if (/大树爷爷|大树|老树/.test(s)) return 'tree';
+  if (/萤火虫/.test(s)) return 'firefly';
+
+  if (characters && characters.length) {
+    for (const c of characters) {
+      const k = CHAR_TO_KIND[c];
+      if (k) return k;
+    }
+  }
+  return 'bear';
 }
 
 /** 把故事对象压缩为历史列表用的摘要 */
