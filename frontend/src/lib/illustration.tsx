@@ -124,6 +124,26 @@ function DeerFriend({ x, y, s, color, accent }: { x: number; y: number; s: numbe
   );
 }
 
+// 小猴子：圆耳 + 圆脸 + 弯弯尾巴 + 棕色
+function MonkeyFriend({ x, y, s, color, accent }: { x: number; y: number; s: number; color: string; accent: string }) {
+  return (
+    <FriendWrap x={x} y={y} s={s}>
+      <circle cx={x - s * 0.7} cy={y - s * 0.75} r={s * 0.35} fill={color} />
+      <circle cx={x + s * 0.7} cy={y - s * 0.75} r={s * 0.35} fill={color} />
+      <circle cx={x - s * 0.7} cy={y - s * 0.75} r={s * 0.18} fill={accent} opacity={0.7} />
+      <circle cx={x + s * 0.7} cy={y - s * 0.75} r={s * 0.18} fill={accent} opacity={0.7} />
+      <circle cx={x} cy={y} r={s * 0.95} fill={color} />
+      <circle cx={x - s * 0.32} cy={y - s * 0.1} r={s * 0.1} fill="#3a2a4d" />
+      <circle cx={x + s * 0.32} cy={y - s * 0.1} r={s * 0.1} fill="#3a2a4d" />
+      <ellipse cx={x} cy={y + s * 0.22} rx={s * 0.16} ry={s * 0.12} fill="#3a2a4d" opacity={0.85} />
+      <path d={`M ${x - s * 0.12} ${y + s * 0.32} Q ${x} ${y + s * 0.45} ${x + s * 0.12} ${y + s * 0.32}`} stroke="#3a2a4d" strokeWidth={s * 0.05} fill="none" strokeLinecap="round" />
+      <path d={`M ${x + s * 0.85} ${y + s * 0.15} Q ${x + s * 1.35} ${y + s * 0.65} ${x + s * 1.2} ${y - s * 0.55}`} stroke={color} strokeWidth={s * 0.13} fill="none" strokeLinecap="round" />
+      <circle cx={x - s * 0.55} cy={y + s * 0.25} r={s * 0.06} fill={accent} opacity={0.6} />
+      <circle cx={x + s * 0.55} cy={y + s * 0.25} r={s * 0.06} fill={accent} opacity={0.6} />
+    </FriendWrap>
+  );
+}
+
 // 小狐狸：尖耳 + 长下巴
 function FoxFriend({ x, y, s, color, accent: _accent }: { x: number; y: number; s: number; color: string; accent: string }) {
   return (
@@ -285,6 +305,7 @@ function Friend({
   switch (kind) {
     case 'bunny':   return <BunnyFriend   x={x} y={y} s={s} color={color} accent={accent} />;
     case 'deer':    return <DeerFriend    x={x} y={y} s={s} color={color} accent={accent} />;
+    case 'monkey':  return <MonkeyFriend  x={x} y={y} s={s} color={color} accent={accent} />;
     case 'fox':     return <FoxFriend     x={x} y={y} s={s} color={color} accent={accent} />;
     case 'cat':     return <CatFriend     x={x} y={y} s={s} color={color} accent={accent} />;
     case 'duck':    return <DuckFriend    x={x} y={y} s={s} color={color} accent={accent} />;
@@ -420,6 +441,7 @@ function inferKindFromContext(
     ['小鹿', 'deer'], ['鹿', 'deer'],
     ['小兔', 'bunny'], ['兔子', 'bunny'], ['兔', 'bunny'],
     ['小熊', 'bear'], ['熊', 'bear'],
+    ['小猴子', 'monkey'], ['猴子', 'monkey'], ['猴', 'monkey'],
     ['小狐狸', 'fox'], ['狐狸', 'fox'], ['狐', 'fox'],
     ['小猫', 'cat'], ['猫咪', 'cat'], ['猫', 'cat'],
     ['小鸭', 'duck'], ['鸭子', 'duck'], ['鸭', 'duck'],
@@ -448,6 +470,7 @@ const KIND_PALETTE: Record<AnimalKind, { body: string; accent: string }> = {
   bear:    { body: '#f6c97b', accent: '#8b7be8' },
   bunny:   { body: '#ffd9ec', accent: '#ffb3c6' },
   deer:    { body: '#d8a76b', accent: '#fff4cf' },
+  monkey:  { body: '#c49a6c', accent: '#ffe4b0' },
   fox:     { body: '#ff9d6b', accent: '#ffe1b0' },
   cat:     { body: '#d8d3c8', accent: '#c79bff' },
   duck:    { body: '#ffe066', accent: '#ff9a4a' },

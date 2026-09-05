@@ -41,6 +41,7 @@ const CHAR_TO_KIND: Record<string, AnimalKind> = {
   小鸭子: 'duck',
   小猫咪: 'cat',
   小鹿: 'deer',
+  小猴子: 'monkey',
   小星星: 'star',
   月亮婆婆: 'moon',
   云朵宝宝: 'cloud',
@@ -57,6 +58,7 @@ export function kindFromName(name: string): AnimalKind | undefined {
   if (k) return k;
   if (/鹿/.test(name)) return 'deer';
   if (/兔/.test(name)) return 'bunny';
+  if (/猴/.test(name)) return 'monkey';
   if (/熊/.test(name)) return 'bear';
   if (/狐/.test(name)) return 'fox';
   if (/猫/.test(name)) return 'cat';

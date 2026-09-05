@@ -52,6 +52,7 @@ export type AnimalKind =
   | 'duck'
   | 'cat'
   | 'deer'
+  | 'monkey'
   | 'star'
   | 'moon'
   | 'cloud'
