@@ -30,7 +30,7 @@ authRouter.get('/check', (req: Request, res: Response) => {
     return res.json({ exists: false, hasPassword: false });
   }
   const user = findUserByPhone(phone);
-  res.json({ exists: !!user, hasPassword: !!user?.passwordHash });
+  return res.json({ exists: !!user, hasPassword: !!user?.passwordHash });
 });
 
 const sendSchema = z.object({
