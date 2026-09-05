@@ -26,7 +26,7 @@ authRouter.get('/config', (_req: Request, res: Response) => {
 /** 查询手机号是否已注册 / 是否设过密码（用于前端提示"去注册"还是"输密码"） */
 authRouter.get('/check', (req: Request, res: Response) => {
   const phone = String(req.query.phone ?? '').trim();
-  if (!/^1\d{10}$/.test(phone)) {
+  if (!/^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$/.test(phone)) {
     return res.json({ exists: false, hasPassword: false });
   }
   const user = findUserByPhone(phone);
@@ -34,14 +34,14 @@ authRouter.get('/check', (req: Request, res: Response) => {
 });
 
 const sendSchema = z.object({
-  phone: z.string().regex(/^1\d{10}$/),
+  phone: z.string().regex(/^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$/),
 });
 
 /** 发送短信验证码（未配置短信服务时返回明确错误，前端不会走到这里） */
 authRouter.post('/sms/send', async (req: Request, res: Response) => {
   const parsed = sendSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ status: 'error', message: '手机号格式不正确' });
+    return res.status(400).json({ status: 'error', message: '请输入有效的手机号' });
   }
   if (!smsEnabled()) {
     return res.status(400).json({ status: 'error', message: '短信服务未开通' });
@@ -73,8 +73,8 @@ authRouter.post('/login', (req: Request, res: Response) => {
   const { method, identifier, name, code, password, mode } = parsed.data;
 
   if (method === 'phone') {
-    if (!/^1\d{10}$/.test(identifier)) {
-      return res.status(400).json({ status: 'error', message: '手机号格式不正确' });
+    if (!/^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$/.test(identifier)) {
+      return res.status(400).json({ status: 'error', message: '请输入有效的手机号' });
     }
 
     if (mode === 'password') {

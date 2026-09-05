@@ -88,6 +88,79 @@ function Hill({ y, color }: { y: number; color: string }) {
   return <path d={`M0 ${y} Q 120 ${y - 60} 240 ${y - 10} T 480 ${y - 30} V300 H0 Z`} fill={color} />;
 }
 
+// 远山（大场景时出现）
+function Mountain({ x, y, s, color }: { x: number; y: number; s: number; color: string }) {
+  return (
+    <path
+      d={`M${x} ${y} L${x - s} ${y + s * 0.85} L${x + s} ${y + s * 0.85} Z`}
+      fill={color}
+      opacity={0.55}
+    />
+  );
+}
+
+// 河流/湖泊（水场景）
+function River({ color }: { color: string }) {
+  return (
+    <g opacity={0.55}>
+      <path
+        d="M0 260 Q 120 245 240 255 T 480 250 V300 H0 Z"
+        fill={color}
+      />
+      {/* 两道淡淡的水波 */}
+      <path d="M60 270 Q 180 260 300 270" stroke="#fff" strokeWidth={2} strokeLinecap="round" opacity={0.25} fill="none" />
+      <path d="M200 282 Q 320 272 440 282" stroke="#fff" strokeWidth={2} strokeLinecap="round" opacity={0.2} fill="none" />
+    </g>
+  );
+}
+
+// 树木（森林/树林场景）
+function Tree({ x, y, s, color }: { x: number; y: number; s: number; color: string }) {
+  return (
+    <g>
+      <rect x={x - s * 0.08} y={y} width={s * 0.16} height={s * 0.55} fill="#3a2a4d" opacity={0.6} />
+      <path d={`M${x} ${y - s * 0.9} L${x - s * 0.45} ${y} L${x + s * 0.45} ${y} Z`} fill={color} />
+      <path d={`M${x} ${y - s * 1.35} L${x - s * 0.35} ${y - s * 0.45} L${x + s * 0.35} ${y - s * 0.45} Z`} fill={color} opacity={0.85} />
+    </g>
+  );
+}
+
+// 小路（出发/远行场景）
+function Path({ color }: { color: string }) {
+  return (
+    <path
+      d="M220 300 C 230 280, 250 260, 240 240 S 210 210, 230 190"
+      stroke={color}
+      strokeWidth={10}
+      strokeLinecap="round"
+      fill="none"
+      opacity={0.35}
+    />
+  );
+}
+
+// 花朵/草丛（温暖场景）
+function Flower({ x, y, color }: { x: number; y: number; color: string }) {
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      <circle r={3} fill={color} />
+      <circle cx={-4} cy={-2} r={2.2} fill={color} opacity={0.7} />
+      <circle cx={4} cy={-2} r={2.2} fill={color} opacity={0.7} />
+      <circle cx={0} cy={-5} r={2.2} fill={color} opacity={0.7} />
+    </g>
+  );
+}
+
+// 萤火虫（夏夜/发光场景）
+function Firefly({ x, y, delay }: { x: number; y: number; delay: number }) {
+  return (
+    <circle cx={x} cy={y} r={2.5} fill="#fff6a8" opacity={0.9}>
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite" begin={`${delay}s`} />
+      <animate attributeName="r" values="2;3.5;2" dur="2s" repeatCount="indefinite" begin={`${delay}s`} />
+    </circle>
+  );
+}
+
 export function StoryIllustration({ spec, className }: { spec: IllustrationSpec; className?: string }) {
   const rng = new Rng(spec.seed);
   const pal = PALETTES[spec.palette];
@@ -112,8 +185,26 @@ export function StoryIllustration({ spec, className }: { spec: IllustrationSpec;
   const hasFriend = spec.elements.includes('friend');
   const hasChild = spec.hasChild;
   const hasHill = spec.elements.includes('hill') || spec.elements.includes('river');
+  const hasRiver = spec.elements.includes('river');
+  const hasMountain = spec.elements.includes('mountain');
+  const hasTree = spec.elements.includes('tree');
+  const hasPath = spec.elements.includes('path');
+  const hasFlower = spec.elements.includes('flower');
+  const hasFirefly = spec.elements.includes('firefly');
 
   const friendColor = rng.pick(['#f6c97b', '#ffb3c6', '#a7e3c9', '#b9a7ff', '#ffd6a5']);
+
+  const treePositions = hasTree
+    ? Array.from({ length: rng.int(2, 4) }, () => ({ x: rng.int(30, 450), y: rng.int(210, 255), s: rng.int(22, 36) }))
+    : [];
+
+  const flowerPositions = hasFlower
+    ? Array.from({ length: rng.int(4, 7) }, () => ({ x: rng.int(20, 460), y: rng.int(255, 292) }))
+    : [];
+
+  const fireflyPositions = hasFirefly
+    ? Array.from({ length: rng.int(4, 8) }, () => ({ x: rng.int(30, 450), y: rng.int(100, 240), delay: rng.float() * 2 }))
+    : [];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className={className} preserveAspectRatio="xMidYMid slice" role="img" aria-label="故事插画">
@@ -123,8 +214,8 @@ export function StoryIllustration({ spec, className }: { spec: IllustrationSpec;
           <stop offset="100%" stopColor={pal.sky[1]} />
         </linearGradient>
         <radialGradient id={`${id}-glow`} cx="50%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0%" stopColor="#fff" stopOpacity={0.18} />
+          <stop offset="100%" stopColor="#fff" stopOpacity={0} />
         </radialGradient>
       </defs>
 
@@ -137,14 +228,37 @@ export function StoryIllustration({ spec, className }: { spec: IllustrationSpec;
 
       {clouds.map((c, i) => (hasCloud || i === 0 ? <Cloud key={i} {...c} color="#ffffff" opacity={0.85} /> : null))}
 
+      {hasMountain && (
+        <>
+          <Mountain x={100} y={110} s={70} color={pal.hill} />
+          <Mountain x={360} y={130} s={55} color={pal.hill} />
+        </>
+      )}
+
       {hasHill && <Hill y={210} color={pal.hill} />}
 
       {/* 地面 */}
       <path d={`M0 250 Q 240 220 480 255 V300 H0 Z`} fill={pal.hill} />
 
+      {hasRiver && <River color={pal.accent} />}
+
+      {hasPath && <Path color={pal.moon} />}
+
+      {treePositions.map((t, i) => (
+        <Tree key={i} x={t.x} y={t.y} s={t.s} color={pal.hill} />
+      ))}
+
+      {flowerPositions.map((f, i) => (
+        <Flower key={i} x={f.x} y={f.y} color={rng.pick(['#ffb3c6', '#f6c97b', '#a7e3c9', '#c79bff', '#ffb38a'])} />
+      ))}
+
       {hasBed && <Bed x={150} y={215} s={26} color={pal.accent} accent={pal.moon} />}
       {hasChild && <Child x={300} y={205} s={26} accent={pal.accent} />}
       {hasFriend && <Friend x={rng.int(120, 200)} y={rng.int(180, 210)} s={rng.int(22, 28)} color={friendColor} accent={pal.accent} />}
+
+      {fireflyPositions.map((f, i) => (
+        <Firefly key={i} x={f.x} y={f.y} delay={f.delay} />
+      ))}
     </svg>
   );
 }

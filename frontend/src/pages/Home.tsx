@@ -24,7 +24,7 @@ const SAMPLE: IllustrationSpec = {
 
 const FEATURES = [
   { icon: Baby, title: '专属定制', desc: '把宝宝的名字和喜欢的角色写进故事里，每个孩子都有自己的版本。' },
-  { icon: ImageIcon, title: 'AI 生成插画', desc: '每页自动绘制柔和、适龄的睡前画风，随情节从夜色过渡到暖梦。' },
+  { icon: ImageIcon, title: '为每页生成插画', desc: '每页自动绘制柔和、适龄的睡前画风，随情节从夜色过渡到暖梦。' },
   { icon: Volume2, title: '轻柔语音朗读', desc: '可调语速、音量与背景音（细雨/海浪/心跳…），声音温柔不刺耳。' },
   { icon: ShieldCheck, title: '家长预览审核', desc: '生成后必须经过家长预览确认，内容适宜才会进入播放。' },
   { icon: Cloud, title: '云端同步历史', desc: '登录后故事与偏好自动保存，手机、电脑跨设备随时回看。' },

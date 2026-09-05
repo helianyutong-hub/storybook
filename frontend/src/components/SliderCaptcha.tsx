@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronsRight } from 'lucide-react';
 
 const KNOB = 44; // 与 size-11 对应（2.75rem = 44px）
+const THRESHOLD = 92; // 拖到 92% 视为通过
 
 interface Props {
   /** 验证通过/失败时回调（用于解锁登录按钮） */
@@ -13,6 +14,11 @@ interface Props {
 /**
  * 纯前端滑块人机验证：把滑块拖到最右侧即视为「非机器人」。
  * 不依赖任何第三方验证码服务，零成本、可离线工作。
+ *
+ * 修复点：
+ * 1. 拖动期间在 window 上监听 pointermove/pointerup，避免滑块脱手后事件丢失
+ * 2. pointercancel / 失焦时自动兜底处理
+ * 3. touch-action: none 防止微信/移动端拖动时页面跟着滚动
  */
 export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -38,43 +44,64 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
   useEffect(() => {
     setPos(0);
     setVerified(false);
+    dragging.current = false;
   }, [resetKey]);
 
   const max = Math.max(0, trackW - KNOB);
-  const percent = max > 0 ? (pos / max) * 100 : 0;
+
+  const commit = (finalPos: number) => {
+    const finalPercent = max > 0 ? (finalPos / max) * 100 : 0;
+    if (finalPercent >= THRESHOLD) {
+      setPos(max);
+      setVerified(true);
+      onVerify?.(true);
+    } else {
+      setPos(0);
+      setVerified(false);
+      onVerify?.(false);
+    }
+    dragging.current = false;
+  };
+
+  // 全局拖动：在 window 上监听，避免按钮脱手后收不到事件
+  useEffect(() => {
+    if (!dragging.current) return;
+
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current) return;
+      const dx = e.clientX - startX.current;
+      let p = startPos.current + dx;
+      p = Math.max(0, Math.min(max, p));
+      setPos(p);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (!dragging.current) return;
+      const dx = e.clientX - startX.current;
+      let p = startPos.current + dx;
+      p = Math.max(0, Math.min(max, p));
+      commit(p);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [dragging.current, max]);
 
   const onDown = (e: React.PointerEvent) => {
     if (verified) return;
     dragging.current = true;
     startX.current = e.clientX;
     startPos.current = pos;
-    // setPointerCapture 在个别环境（合成事件 / 旧浏览器）可能抛错，
-    // 用 try/catch 兜底，避免拖动直接失效
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
-      /* 忽略：没有指针捕获也能靠 pointermove 继续拖动 */
-    }
-  };
-
-  const onMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - startX.current;
-    let p = startPos.current + dx;
-    p = Math.max(0, Math.min(max, p));
-    setPos(p);
-  };
-
-  const onUp = () => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    if (percent >= 92) {
-      setPos(max);
-      setVerified(true);
-      onVerify?.(true);
-    } else {
-      setPos(0);
-      onVerify?.(false);
+      /* 忽略：没有指针捕获也能靠 window 监听继续拖动 */
     }
   };
 
@@ -102,13 +129,10 @@ export function SliderCaptcha({ onVerify, resetKey = 0 }: Props) {
       <button
         type="button"
         onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
         className={`absolute left-0 top-0 grid size-11 touch-none place-items-center rounded-2xl shadow transition-colors ${
           verified ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
         }`}
-        style={{ transform: `translateX(${pos}px)` }}
+        style={{ transform: `translateX(${pos}px)`, touchAction: 'none' }}
         aria-label="拖动滑块完成人机验证"
       >
         {verified ? <Check className="size-5" /> : <ChevronsRight className="size-5" />}

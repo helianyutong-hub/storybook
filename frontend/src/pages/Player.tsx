@@ -23,6 +23,7 @@ import { useApp } from '@/store/AppStore';
 import { getBgSound } from '@/lib/bgSound';
 import { fetchPublicStory, savePublicStory, startStoryAudioJob, pollStoryAudioJob, getCachedAudioUrls } from '@/lib/api';
 import { cancelSpeech } from '@/lib/tts';
+import { StoryIllustration } from '@/lib/illustration';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
@@ -480,8 +481,11 @@ export default function Player() {
       {/* 隐藏音频元素，用于服务端 TTS 播放（微信兼容） */}
       <audio ref={audioRef} preload="none" className="hidden" playsInline />
 
-      {/* 固定渐变背景（替代动态插画，提升加载速度） */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1a1040] via-[#2d1b69] to-[#0d0a26]" />
+      {/* 故事插画背景：与预览页一致，随当前页变化 */}
+      <div className="absolute inset-0 overflow-hidden">
+        <StoryIllustration spec={story.pages[page].illustration} className="h-full w-full object-cover opacity-90" />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0a26]/70 via-[#1a1040]/40 to-[#0d0a26]/90" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
 
       {/* 退出 */}

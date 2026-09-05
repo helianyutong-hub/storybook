@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Moon,
-  ShieldCheck,
   ArrowLeft,
   Loader2,
   Lock,
@@ -37,7 +36,8 @@ export default function Login() {
   const [captchaOk, setCaptchaOk] = useState(false);
   const [captchaReset, setCaptchaReset] = useState(0);
 
-  const phoneOk = /^1\d{10}$/.test(phone.trim());
+  // 严格校验中国大陆手机号号段，避免 11111111111 这类假号走到后端
+  const phoneOk = /^1(3[0-9]|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[0-35-9])\d{8}$/.test(phone.trim());
   const pwdOk = password.length >= 6 && password.length <= 20;
   const pwdMatch = password === password2;
 
@@ -48,7 +48,7 @@ export default function Login() {
 
   /** 密码登录（账号 + 密码 + 人机验证） */
   const doPasswordLogin = async () => {
-    if (!phoneOk) return toast.error('请输入正确的 11 位手机号');
+    if (!phoneOk) return toast.error('请输入有效的手机号');
     if (!password) return toast.error('请输入密码');
     if (!captchaOk) return toast.error('请先拖动滑块完成人机验证');
     setLoading(true);
@@ -68,7 +68,7 @@ export default function Login() {
 
   /** 注册（手机号 + 设密码 + 人机验证） */
   const doRegister = async () => {
-    if (!phoneOk) return toast.error('请输入正确的 11 位手机号');
+    if (!phoneOk) return toast.error('请输入有效的手机号');
     if (!pwdOk) return toast.error('密码需要 6-20 位');
     if (!pwdMatch) return toast.error('两次输入的密码不一致');
     if (!captchaOk) return toast.error('请先拖动滑块完成人机验证');
@@ -235,14 +235,6 @@ export default function Login() {
           )}
         </div>
 
-        <div className="mt-5 flex items-start gap-2 rounded-2xl bg-white/[0.03] p-3">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {isRegister
-              ? '密码加密存储，注册免费。注册后即可用「手机号 + 密码」登录，不再花短信费。'
-              : '账号 + 密码登录不发送短信、不产生任何费用；登录状态会一直保留，除非你主动退出。'}
-          </p>
-        </div>
       </div>
     </div>
   );

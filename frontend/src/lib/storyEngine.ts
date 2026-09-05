@@ -555,14 +555,19 @@ function makeIllustrationForLLM(
   if (/月|moon/i.test(t)) elements.add('moon');
   if (/星|star/i.test(t)) elements.add('stars');
   if (/云|cloud/i.test(t)) elements.add('cloud');
-  if (/河|溪|水|river|stream/i.test(t)) elements.add('river');
-  if (/山|丘|hill|原|forest|树|tree/i.test(t)) elements.add('hill');
+  if (/河|溪|水|湖|海|浪|波|river|stream|lake|sea|water|wave/i.test(t)) elements.add('river');
+  if (/山|mountain|峰|岭|远|peak/i.test(t)) elements.add('mountain');
+  if (/丘|原|hill|野|field/i.test(t)) elements.add('hill');
+  if (/树|林|森|木|forest|tree|wood/i.test(t)) elements.add('tree');
+  if (/花|草|flower|grass|bloom|garden/i.test(t)) elements.add('flower');
+  if (/萤火|firefly|发光|glow|闪亮|亮亮/i.test(t)) elements.add('firefly');
+  if (/路|path|走|出发|远行|journey|road/i.test(t)) elements.add('path');
   if (/床|被|睡|sleep|枕|bed/i.test(t)) {
     elements.add('bed');
     elements.add('moon');
   }
   if (
-    /朋|伙|伴|friend|小熊|小兔|小狐狸|小鹿|小鸭|小鲸|猫咪|小星星|月亮婆婆|云朵|萤火|大樹|大树/i.test(t) ||
+    /朋|伙|伴|friend|小熊|小兔|小狐狸|小鹿|小鸭|小鲸|猫咪|小星星|月亮婆婆|云朵|大樹|大树/i.test(t) ||
     p.characters.length
   ) {
     elements.add('friend');
