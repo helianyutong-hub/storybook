@@ -88,19 +88,40 @@ function write(db: DB) {
 }
 
 // ---------- 用户 / 鉴权 ----------
+/** 手机号登录的随机昵称前缀（可爱风，贴合睡前故事场景） */
+const NICKNAME_PREFIXES = [
+  '小月亮', '小云朵', '小星星', '小海豚', '小萤火',
+  '小奶油', '小棉球', '小夜莺', '小灯笼', '小清风',
+];
+
+function randomNickname(): string {
+  const prefix = NICKNAME_PREFIXES[Math.floor(Math.random() * NICKNAME_PREFIXES.length)];
+  return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+}
+
 export function findOrCreateUser(method: 'phone' | 'wechat', identifier: string, name?: string): User {
   const db = read();
   let user = db.users.find((u) => u.method === method && u.identifier === identifier);
   if (!user) {
     user = {
       id: crypto.randomUUID(),
-      name: name || (method === 'phone' ? `宝宝家长${identifier.slice(-4)}` : '微信用户'),
+      name: name || (method === 'phone' ? randomNickname() : '微信用户'),
       method,
       identifier,
     };
     db.users.push(user);
     write(db);
   }
+  return user;
+}
+
+/** 修改用户昵称（不存在时返回原样，调用前应先鉴权） */
+export function updateUserName(userId: string, name: string): User {
+  const db = read();
+  const user = db.users.find((u) => u.id === userId);
+  if (!user) throw new Error('用户不存在');
+  user.name = name;
+  write(db);
   return user;
 }
 

@@ -19,6 +19,12 @@ services:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
       - DASHSCOPE_WORKSPACE_ID=${DASHSCOPE_WORKSPACE_ID:-}
       - ALIYUN_TTS_MODEL=${ALIYUN_TTS_MODEL:-cosyvoice-v3-flash}
+      # 阿里云短信（登录验证码）：4 个变量都配置后自动启用真实验证码登录
+      # 不配则登录走演示模式（手机号免验证码直接登录）
+      - ALIYUN_SMS_ACCESS_KEY_ID=${ALIYUN_SMS_ACCESS_KEY_ID:-}
+      - ALIYUN_SMS_ACCESS_KEY_SECRET=${ALIYUN_SMS_ACCESS_KEY_SECRET:-}
+      - ALIYUN_SMS_SIGN_NAME=${ALIYUN_SMS_SIGN_NAME:-}
+      - ALIYUN_SMS_TEMPLATE_CODE=${ALIYUN_SMS_TEMPLATE_CODE:-}
     volumes:
       # 持久化故事/用户数据 + 语音缓存（都在 data/ 下，重建容器不会丢）
       - ./data:/app/data

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Phone, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Moon, Phone, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApp } from '@/store/AppStore';
-import { login } from '@/lib/api';
+import { login, fetchAuthConfig, sendSmsCode } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+const RESEND_SECONDS = 60;
 
 export default function Login() {
   const nav = useNavigate();
@@ -13,29 +15,82 @@ export default function Login() {
   const { login: setAuth } = useApp();
   const next = (loc.state as { next?: string } | null)?.next ?? '/history';
   const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState<boolean | null>(null); // null=查询中
+  const [countdown, setCountdown] = useState(0);
+  const [sending, setSending] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const doLogin = async (method: 'phone' | 'wechat', identifier: string, displayName?: string) => {
-    setLoading(true);
-    try {
-      const res = await login(method, identifier, displayName);
-      setAuth({ token: res.token, user: res.user });
-      toast.success(`欢迎，${res.user.name}`);
-      nav(next, { replace: true });
-    } catch {
-      toast.error('登录失败，请稍后再试');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 查询后端是否已启用真实短信验证码（未配置密钥 → 演示模式）
+  useEffect(() => {
+    fetchAuthConfig().then((c) => setSmsEnabled(c.smsEnabled));
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
-  const phoneLogin = () => {
-    const p = phone.trim();
-    if (!/^1\d{10}$/.test(p)) {
+  // 倒计时
+  useEffect(() => {
+    if (countdown <= 0) return;
+    timerRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1 && timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [countdown > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const phoneOk = /^1\d{10}$/.test(phone.trim());
+
+  /** 获取验证码 */
+  const getCode = async () => {
+    if (!phoneOk) {
       toast.error('请输入正确的 11 位手机号');
       return;
     }
-    doLogin('phone', p);
+    if (countdown > 0 || sending) return;
+    setSending(true);
+    try {
+      await sendSmsCode(phone.trim());
+      toast.success('验证码已发送，注意查收短信');
+      setCountdown(RESEND_SECONDS);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '验证码发送失败');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /** 登录 */
+  const doLogin = async () => {
+    const p = phone.trim();
+    if (!phoneOk) {
+      toast.error('请输入正确的 11 位手机号');
+      return;
+    }
+    if (smsEnabled && !/^\d{4,6}$/.test(code.trim())) {
+      toast.error('请输入短信验证码');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await login('phone', p, undefined, smsEnabled ? code.trim() : undefined);
+      setAuth({ token: res.token, user: res.user });
+      toast.success(`欢迎，${res.user.name}`);
+      nav(next, { replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '登录失败，请稍后再试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,44 +114,69 @@ export default function Login() {
         </div>
 
         <label className="mb-1.5 block text-sm font-semibold">手机号</label>
-        <div className="flex gap-2">
-          <Input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="11 位手机号"
-            inputMode="numeric"
-            maxLength={11}
-            className="rounded-2xl bg-white/[0.04]"
-          />
-          <Button
-            className="rounded-2xl"
-            onClick={phoneLogin}
-            disabled={loading}
-          >
-            <Phone className="size-4" /> 登录
-          </Button>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          演示环境：无需真实验证码，输入任意 11 位手机号即可登录。
-        </p>
+        <Input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+          placeholder="11 位手机号"
+          inputMode="numeric"
+          maxLength={11}
+          className="rounded-2xl bg-white/[0.04]"
+        />
 
-        <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="h-px flex-1 bg-white/10" /> 或 <span className="h-px flex-1 bg-white/10" />
-        </div>
+        {smsEnabled === false ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            短信服务开通中：输入手机号即可直接登录（演示模式）。
+          </p>
+        ) : (
+          <>
+            <label className="mb-1.5 mt-4 block text-sm font-semibold">短信验证码</label>
+            <div className="flex gap-2">
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                placeholder={
+                  smsEnabled === null ? '加载中…' : smsEnabled ? '6 位验证码' : '短信服务开通中'
+                }
+                inputMode="numeric"
+                maxLength={6}
+                disabled={smsEnabled !== true}
+                className="rounded-2xl bg-white/[0.04]"
+              />
+              <Button
+                variant="secondary"
+                className="w-28 shrink-0 rounded-2xl"
+                onClick={getCode}
+                disabled={smsEnabled !== true || countdown > 0 || sending || !phoneOk}
+              >
+                {sending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : countdown > 0 ? (
+                  `${countdown}s 后重发`
+                ) : (
+                  '获取验证码'
+                )}
+              </Button>
+            </div>
+          </>
+        )}
 
         <Button
-          variant="secondary"
-          className="h-12 w-full rounded-2xl"
-          onClick={() => doLogin('wechat', `wx_${Date.now()}`, `微信用户${String(Date.now()).slice(-4)}`)}
-          disabled={loading}
+          className="mt-6 h-12 w-full rounded-2xl text-base"
+          onClick={doLogin}
+          disabled={loading || !phoneOk}
         >
-          <MessageCircle className="size-4" /> 微信一键登录
+          {loading ? <Loader2 className="size-4 animate-spin" /> : <Phone className="size-4" />}
+          {smsEnabled ? '登录' : '直接登录'}
         </Button>
-      </div>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        我们仅用于同步你的故事与偏好，不会用于任何社交或商业用途。
-      </p>
+        <div className="mt-5 flex items-start gap-2 rounded-2xl bg-white/[0.03] p-3">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            首次登录会自动创建账号并生成随机昵称，可在「个人中心」修改。
+            我们仅用于同步你的故事与偏好，不会用于任何社交或商业用途。
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

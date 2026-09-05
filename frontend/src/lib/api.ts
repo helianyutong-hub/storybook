@@ -41,11 +41,21 @@ export interface LoginResult {
   user: AuthUser;
 }
 
-export async function login(method: 'phone' | 'wechat', identifier: string, name?: string): Promise<LoginResult> {
+export async function login(
+  method: 'phone' | 'wechat',
+  identifier: string,
+  name?: string,
+  code?: string,
+): Promise<LoginResult> {
   try {
-    const { data } = await apiClient.post('/auth/login', { method, identifier, name });
+    const { data } = await apiClient.post('/auth/login', { method, identifier, name, code });
     return data;
-  } catch {
+  } catch (err) {
+    // 验证码错误/过期等业务错误要如实抛给用户（不能吞掉走模拟登录）
+    if (err && typeof err === 'object' && 'response' in err) {
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      if (msg) throw new Error(msg);
+    }
     // 后端不可用时（纯静态部署 / 本地无后端），走本地模拟登录
     const displayName = name ?? (method === 'phone' ? `用户${identifier.slice(-4)}` : identifier);
     return {
@@ -53,6 +63,32 @@ export async function login(method: 'phone' | 'wechat', identifier: string, name
       user: { id: `local_${identifier}`, name: displayName, method },
     };
   }
+}
+
+/** 登录方式配置：后端是否已启用真实短信验证码（未启用则前端展示演示模式提示） */
+export async function fetchAuthConfig(): Promise<{ smsEnabled: boolean }> {
+  try {
+    const { data } = await apiClient.get('/auth/config');
+    return data;
+  } catch {
+    return { smsEnabled: false };
+  }
+}
+
+/** 发送短信验证码（60s 内会 429，message 可直接 toast） */
+export async function sendSmsCode(phone: string): Promise<void> {
+  try {
+    await apiClient.post('/auth/sms/send', { phone });
+  } catch (err) {
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    throw new Error(msg || '验证码发送失败，请稍后再试');
+  }
+}
+
+/** 修改昵称（需登录） */
+export async function updateUserName(name: string): Promise<AuthUser> {
+  const { data } = await apiClient.patch('/auth/me', { name });
+  return data.user;
 }
 
 export async function fetchMe(): Promise<AuthUser | null> {
