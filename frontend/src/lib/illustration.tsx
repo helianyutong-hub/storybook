@@ -98,12 +98,20 @@ function BunnyFriend({ x, y, s, color, accent }: { x: number; y: number; s: numb
   );
 }
 
-// 小鹿：分叉鹿角 + 圆脸 + 浅色斑点鼻
+// 小鹿：多分叉鹿角 + 圆脸 + 浅色斑点鼻
 function DeerFriend({ x, y, s, color, accent }: { x: number; y: number; s: number; color: string; accent: string }) {
   return (
     <FriendWrap x={x} y={y} s={s}>
-      <path d={`M ${x - s * 0.5} ${y - s * 0.85} L ${x - s * 0.85} ${y - s * 1.6} L ${x - s * 1.05} ${y - s * 1.45} M ${x - s * 0.85} ${y - s * 1.6} L ${x - s * 0.7} ${y - s * 1.25}`} stroke="#7a5a3a" strokeWidth={s * 0.1} strokeLinecap="round" fill="none" />
-      <path d={`M ${x + s * 0.5} ${y - s * 0.85} L ${x + s * 0.85} ${y - s * 1.6} L ${x + s * 1.05} ${y - s * 1.45} M ${x + s * 0.85} ${y - s * 1.6} L ${x + s * 0.7} ${y - s * 1.25}`} stroke="#7a5a3a" strokeWidth={s * 0.1} strokeLinecap="round" fill="none" />
+      {/* 左侧鹿角：主干（弧线）+ 后枝 + 顶枝（独立 stroke，让分叉更清晰） */}
+      <path d={`M ${x - s * 0.45} ${y - s * 0.82} Q ${x - s * 0.72} ${y - s * 1.15} ${x - s * 0.95} ${y - s * 1.55}`} stroke="#7a5a3a" strokeWidth={s * 0.11} strokeLinecap="round" fill="none" />
+      <path d={`M ${x - s * 0.6} ${y - s * 1.05} L ${x - s * 1.18} ${y - s * 1.35}`} stroke="#7a5a3a" strokeWidth={s * 0.09} strokeLinecap="round" fill="none" />
+      <path d={`M ${x - s * 0.78} ${y - s * 1.25} L ${x - s * 0.58} ${y - s * 1.85}`} stroke="#7a5a3a" strokeWidth={s * 0.09} strokeLinecap="round" fill="none" />
+      <path d={`M ${x - s * 0.95} ${y - s * 1.55} L ${x - s * 0.78} ${y - s * 2.05}`} stroke="#7a5a3a" strokeWidth={s * 0.09} strokeLinecap="round" fill="none" />
+      {/* 右侧鹿角（对称） */}
+      <path d={`M ${x + s * 0.45} ${y - s * 0.82} Q ${x + s * 0.72} ${y - s * 1.15} ${x + s * 0.95} ${y - s * 1.55}`} stroke="#7a5a3a" strokeWidth={s * 0.11} strokeLinecap="round" fill="none" />
+      <path d={`M ${x + s * 0.6} ${y - s * 1.05} L ${x + s * 1.18} ${y - s * 1.35}`} stroke="#7a5a3a" strokeWidth={s * 0.09} strokeLinecap="round" fill="none" />
+      <path d={`M ${x + s * 0.78} ${y - s * 1.25} L ${x + s * 0.58} ${y - s * 1.85}`} stroke="#7a5a3a" strokeWidth={s * 0.09} strokeLinecap="round" fill="none" />
+      <path d={`M ${x + s * 0.95} ${y - s * 1.55} L ${x + s * 0.78} ${y - s * 2.05}`} stroke="#7a5a3a" strokeWidth={s * 0.09} strokeLinecap="round" fill="none" />
       <circle cx={x} cy={y} r={s * 0.95} fill={color} />
       <circle cx={x - s * 0.3} cy={y - s * 0.1} r={s * 0.1} fill="#3a2a4d" />
       <circle cx={x + s * 0.3} cy={y - s * 0.1} r={s * 0.1} fill="#3a2a4d" />

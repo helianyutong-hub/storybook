@@ -50,6 +50,26 @@ const CHAR_TO_KIND: Record<string, AnimalKind> = {
   萤火虫: 'firefly',
 };
 
+// 从任意角色名猜动物：先精确查表（CHARACTER_LIBRARY 标准角色），
+// 再按关键词宽松匹配（用户自定义角色名也能识别，如「梅花鹿小姐」「小白兔」）。
+export function kindFromName(name: string): AnimalKind | undefined {
+  const k = CHAR_TO_KIND[name];
+  if (k) return k;
+  if (/鹿/.test(name)) return 'deer';
+  if (/兔/.test(name)) return 'bunny';
+  if (/熊/.test(name)) return 'bear';
+  if (/狐/.test(name)) return 'fox';
+  if (/猫/.test(name)) return 'cat';
+  if (/鸭/.test(name)) return 'duck';
+  if (/鲸/.test(name)) return 'whale';
+  if (/星/.test(name)) return 'star';
+  if (/月/.test(name)) return 'moon';
+  if (/云/.test(name)) return 'cloud';
+  if (/树/.test(name)) return 'tree';
+  if (/萤火/.test(name)) return 'firefly';
+  return undefined;
+}
+
 // 不同基调的形容词池（中文叙事用）
 const TONE_WORDS: Record<SoothingTone, { adj: string[]; verb: string[] }> = {
   gentle: { adj: ['温柔的', '轻轻的', '软软的', '暖暖的'], verb: ['依偎着', '慢慢晃着', '悄悄看着'] },
@@ -396,8 +416,9 @@ function buildPage(
     elements: Array.from(new Set(elements)),
     mood: p.tone,
     hasChild: beat !== 'open' || rng.chance(0.3),
-    // 让「小伙伴」画成 picked 角色对应的动物（而不是默认的圆头小熊）
-    friendKind: CHAR_TO_KIND[picked] ?? 'bear',
+    // 让「小伙伴」画成 picked 角色对应的动物（而不是默认的圆头小熊）；
+    // 自定义角色名也能按"鹿/兔/熊..."关键词匹配上。
+    friendKind: kindFromName(picked) ?? 'bear',
   };
 
   return { text, scene, illustration };
@@ -631,7 +652,7 @@ function pickFriendKind(sceneText: string, characters: string[]): AnimalKind {
 
   if (characters && characters.length) {
     for (const c of characters) {
-      const k = CHAR_TO_KIND[c];
+      const k = kindFromName(c);
       if (k) return k;
     }
   }
