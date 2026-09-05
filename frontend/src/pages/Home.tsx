@@ -20,6 +20,7 @@ const SAMPLE: IllustrationSpec = {
   elements: ['moon', 'stars', 'cloud', 'friend'],
   mood: 'gentle',
   hasChild: true,
+  friendKind: 'bear',
 };
 
 const FEATURES = [

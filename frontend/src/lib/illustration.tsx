@@ -6,6 +6,7 @@
 
 import { Rng } from './prng';
 import { IllustrationSpec, Palette, AnimalKind } from '@/types/story';
+import { kindFromName } from './storyEngine';
 
 const PALETTES: Record<Palette, { sky: [string, string]; hill: string; moon: string; star: string; accent: string }> = {
   night: { sky: ['#241b4d', '#3a2a6b'], hill: '#1c1640', moon: '#ffe6a8', star: '#fff4cf', accent: '#8b7be8' },
@@ -402,6 +403,46 @@ function pickKindFromElements(elements: string[]): AnimalKind {
   return 'bear';
 }
 
+/**
+ * 老故事兼容：用 characters / scene / pageText 给缺失 friendKind 的页面重新猜一只动物。
+ * 优先级：先扫 pageText + scene 的动物关键词；再按 characters 第一个查表/匹配；
+ * 再退化到 pickKindFromElements（按元素猜）；最后兜底 bear。
+ */
+function inferKindFromContext(
+  characters: string[] | undefined,
+  scene: string | undefined,
+  pageText: string | undefined,
+  elements: string[],
+): AnimalKind {
+  const text = `${scene ?? ''}\n${pageText ?? ''}`;
+  // 1) 文案/场景里直接出现动物关键词
+  for (const [kw, kind] of [
+    ['小鹿', 'deer'], ['鹿', 'deer'],
+    ['小兔', 'bunny'], ['兔子', 'bunny'], ['兔', 'bunny'],
+    ['小熊', 'bear'], ['熊', 'bear'],
+    ['小狐狸', 'fox'], ['狐狸', 'fox'], ['狐', 'fox'],
+    ['小猫', 'cat'], ['猫咪', 'cat'], ['猫', 'cat'],
+    ['小鸭', 'duck'], ['鸭子', 'duck'], ['鸭', 'duck'],
+    ['鲸鱼', 'whale'], ['鲸', 'whale'],
+    ['星星', 'star'], ['星', 'star'],
+    ['月亮', 'moon'], ['月', 'moon'],
+    ['云朵', 'cloud'], ['云', 'cloud'],
+    ['大树', 'tree'], ['树', 'tree'],
+    ['萤火虫', 'firefly'], ['萤火', 'firefly'],
+  ] as const) {
+    if (text.includes(kw)) return kind as AnimalKind;
+  }
+  // 2) characters 列表（标准名 / 自定义名都能识别）
+  if (characters && characters.length) {
+    for (const c of characters) {
+      const k = kindFromName(c);
+      if (k) return k;
+    }
+  }
+  // 3) 按 elements 启发式（保持向后兼容）
+  return pickKindFromElements(elements);
+}
+
 // 不同动物的配色（保持柔和、睡前的视觉调性）
 const KIND_PALETTE: Record<AnimalKind, { body: string; accent: string }> = {
   bear:    { body: '#f6c97b', accent: '#8b7be8' },
@@ -418,7 +459,22 @@ const KIND_PALETTE: Record<AnimalKind, { body: string; accent: string }> = {
   firefly: { body: '#fff6a8', accent: '#ffe066' },
 };
 
-export function StoryIllustration({ spec, className }: { spec: IllustrationSpec; className?: string }) {
+export function StoryIllustration({
+  spec,
+  characters,
+  scene,
+  pageText,
+  className,
+}: {
+  spec: IllustrationSpec;
+  /** 故事级的角色列表（用于老故事没有 friendKind 字段时的兜底推断） */
+  characters?: string[];
+  /** 当前页的场景关键词（用于老故事没有 friendKind 字段时的兜底推断） */
+  scene?: string;
+  /** 当前页文案（用于老故事没有 friendKind 字段时的兜底推断） */
+  pageText?: string;
+  className?: string;
+}) {
   const rng = new Rng(spec.seed);
   const pal = PALETTES[spec.palette];
   const W = 480;
@@ -449,8 +505,11 @@ export function StoryIllustration({ spec, className }: { spec: IllustrationSpec;
   const hasFlower = spec.elements.includes('flower');
   const hasFirefly = spec.elements.includes('firefly');
 
-  // 决定动物的种类与配色
-  const kind: AnimalKind = spec.friendKind ?? (hasFriend ? pickKindFromElements(spec.elements) : 'bear');
+  // 决定动物的种类与配色：spec.friendKind 优先（新版数据）；缺失时按文案/角色/元素推断（兼容老数据）
+  const kind: AnimalKind = spec.friendKind
+    ?? (hasFriend
+      ? inferKindFromContext(characters, scene, pageText, spec.elements)
+      : 'bear');
   const kindPal = KIND_PALETTE[kind];
 
   const treePositions = hasTree

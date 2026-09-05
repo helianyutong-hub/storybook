@@ -20,7 +20,13 @@ export function StorybookViewer({
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       <div className={cn('relative overflow-hidden border border-white/10 shadow-xl', rounded)}>
-        <StoryIllustration spec={page.illustration} className="aspect-[4/3] w-full" />
+        <StoryIllustration
+          spec={page.illustration}
+          characters={story.params.characters}
+          scene={page.scene}
+          pageText={page.text}
+          className="aspect-[4/3] w-full"
+        />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
         {showText && (
           <p

@@ -483,7 +483,13 @@ export default function Player() {
 
       {/* 故事插画背景：与预览页一致，随当前页变化 */}
       <div className="absolute inset-0 overflow-hidden">
-        <StoryIllustration spec={story.pages[page].illustration} className="h-full w-full object-cover opacity-90" />
+        <StoryIllustration
+          spec={story.pages[page].illustration}
+          characters={story.params.characters}
+          scene={story.pages[page].scene}
+          pageText={story.pages[page].text}
+          className="h-full w-full object-cover opacity-90"
+        />
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-[#0d0a26]/70 via-[#1a1040]/40 to-[#0d0a26]/90" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
