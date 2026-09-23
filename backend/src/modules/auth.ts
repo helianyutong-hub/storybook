@@ -88,7 +88,7 @@ authRouter.post('/login', (req: Request, res: Response) => {
           .status(400)
           .json({ status: 'error', message: '该手机号未注册，请先注册账号' });
       }
-      if (!verifyPasswordAndUpgrade(phone, password)) {
+      if (!verifyPasswordAndUpgrade(identifier, password)) {
         return res.status(400).json({ status: 'error', message: '密码不正确' });
       }
       const token = createToken(user.id);
