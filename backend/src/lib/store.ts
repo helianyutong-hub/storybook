@@ -2,7 +2,8 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { scryptSync, randomBytes, timingSafeEqual } from 'crypto';
+import { scryptSync, timingSafeEqual } from 'crypto';
+import bcrypt from 'bcryptjs';
 
 function findDataDir(): string {
   const candidates = [
@@ -36,7 +37,7 @@ export interface User {
   name: string;
   method: 'phone' | 'wechat';
   identifier: string;
-  /** scrypt 加盐哈希（格式 salt:hash），仅密码注册/设置过的用户才有 */
+  /** 密码哈希：新注册/改密为 bcrypt（`$2a$...`），历史数据为 scrypt（`salt:hash`）；仅设置过密码的用户才有 */
   passwordHash?: string;
 }
 
@@ -118,19 +119,34 @@ export function findOrCreateUser(method: 'phone' | 'wechat', identifier: string,
   return user;
 }
 
-// ---------- 密码（scrypt 加盐哈希，绝不明文存储） ----------
+// ---------- 密码（bcrypt 加盐哈希，绝不明文存储；兼容旧 scrypt 哈希平滑迁移） ----------
 const SCRYPT_KEYLEN = 64;
+const BCRYPT_ROUNDS = 12;
 
-/** 生成 scrypt 哈希，格式 `salt:hash` */
+/** 生成 bcrypt 哈希（自带 salt，格式 `$2a$...`），用于新注册 / 改密 */
 export function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(password, salt, SCRYPT_KEYLEN).toString('hex');
-  return `${salt}:${hash}`;
+  return bcrypt.hashSync(password, BCRYPT_ROUNDS);
 }
 
-/** 校验密码（用 timingSafeEqual 防时序侧信道） */
+/** 是否为 bcrypt 格式（以 $2 开头），否则视为旧 scrypt 哈希 */
+function isBcryptHash(stored?: string): boolean {
+  return !!stored && stored.startsWith('$2');
+}
+
+/**
+ * 校验密码。为何兼容双算法：历史数据存的是 scrypt `salt:hash`，
+ * 直接切 bcrypt 会导致老用户无法登录；故旧格式走 scrypt 校验，新格式走 bcrypt。
+ */
 export function verifyPassword(password: string, stored?: string): boolean {
   if (!stored) return false;
+  if (isBcryptHash(stored)) {
+    try {
+      return bcrypt.compareSync(password, stored);
+    } catch {
+      return false;
+    }
+  }
+  // 旧 scrypt 哈希兼容路径：保证已注册用户仍能登录，不破坏已有功能
   const [salt, hash] = stored.split(':');
   if (!salt || !hash) return false;
   try {
@@ -141,6 +157,23 @@ export function verifyPassword(password: string, stored?: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * 登录校验并静默升级：旧 scrypt 用户在登录成功后，自动用 bcrypt 重写哈希，
+ * 让历史密码平滑迁移到 bcrypt 且对用户无感。登录接口应改用本函数替代 verifyPassword。
+ */
+export function verifyPasswordAndUpgrade(phone: string, password: string): boolean {
+  const db = read();
+  const user = db.users.find((u) => u.method === 'phone' && u.identifier === phone);
+  if (!user) return false;
+  const ok = verifyPassword(password, user.passwordHash);
+  if (ok && user.passwordHash && !isBcryptHash(user.passwordHash)) {
+    // 登录成功且仍是旧 scrypt 哈希 → 静默升级为 bcrypt，下次登录即走新算法
+    user.passwordHash = hashPassword(password);
+    write(db);
+  }
+  return ok;
 }
 
 /** 按手机号查找用户（method='phone'） */

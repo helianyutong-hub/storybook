@@ -7,7 +7,7 @@ import {
   updateUserName,
   findUserByPhone,
   registerWithPassword,
-  verifyPassword,
+  verifyPasswordAndUpgrade,
   setUserPassword,
 } from '../lib/store';
 import { smsEnabled, sendSmsCode, verifySmsCode } from '../lib/sms';
@@ -88,7 +88,7 @@ authRouter.post('/login', (req: Request, res: Response) => {
           .status(400)
           .json({ status: 'error', message: '该手机号未注册，请先注册账号' });
       }
-      if (!verifyPassword(password, user.passwordHash)) {
+      if (!verifyPasswordAndUpgrade(phone, password)) {
         return res.status(400).json({ status: 'error', message: '密码不正确' });
       }
       const token = createToken(user.id);
