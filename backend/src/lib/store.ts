@@ -225,6 +225,20 @@ export function setUserPassword(userId: string, password: string): User {
   return user;
 }
 
+/**
+ * 忘记密码：按手机号直接重置密码。
+ * 注意：本实现为演示模式，未做短信/邮箱验证（当前服务器未配置阿里云短信）。
+ * 生产环境应改为「发送验证码 → 校验验证码 → 再重置」，避免任何人凭手机号直接改密。
+ */
+export function resetPasswordByPhone(phone: string, newPassword: string): User {
+  const db = read();
+  const user = db.users.find((u) => u.method === 'phone' && u.identifier === phone);
+  if (!user) throw new Error('该手机号未注册');
+  user.passwordHash = hashPassword(newPassword);
+  write(db);
+  return user;
+}
+
 /** 修改用户昵称（不存在时返回原样，调用前应先鉴权） */
 export function updateUserName(userId: string, name: string): User {
   const db = read();

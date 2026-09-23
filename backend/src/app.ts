@@ -9,6 +9,7 @@ import { errorHandler } from './middleware/errorHandler'
 import { httpLogger } from './middleware/logger'
 import { systemRouter } from './modules/system'
 import { authRouter } from './modules/auth'
+import { forgotPasswordRouter } from './modules/forgotPassword'
 import { storiesRouter } from './modules/stories'
 import { publicStoriesRouter } from './modules/publicStories'
 import { preferencesRouter } from './modules/preferences'
@@ -41,6 +42,7 @@ export const createApp = (): Application => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
   app.use(`${env.API_PREFIX}/auth`, authRouter)
+  app.use(`${env.API_PREFIX}/forgot-password`, forgotPasswordRouter)
   app.use(`${env.API_PREFIX}/stories`, storiesRouter)
   app.use(`${env.API_PREFIX}/public/stories`, publicStoriesRouter)
   app.use(`${env.API_PREFIX}/preferences`, preferencesRouter)

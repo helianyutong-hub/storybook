@@ -108,6 +108,16 @@ export async function setPassword(password: string): Promise<void> {
   return data;
 }
 
+/** 忘记密码：按手机号直接重置密码（演示模式，无短信验证） */
+export async function forgotPassword(phone: string, newPassword: string): Promise<void> {
+  try {
+    await apiClient.post('/forgot-password', { phone, newPassword });
+  } catch (err) {
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    throw new Error(msg || '重置失败，请稍后再试');
+  }
+}
+
 /** 登录方式配置：后端是否已启用真实短信验证码（未启用则前端展示演示模式提示） */
 export async function fetchAuthConfig(): Promise<{
   smsEnabled: boolean;

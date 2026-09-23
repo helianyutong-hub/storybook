@@ -14,6 +14,7 @@ import Preview from './pages/Preview';
 import Player from './pages/Player';
 import History from './pages/History';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
@@ -45,6 +46,7 @@ function App() {
                 <Route path="/player/:id" data-genie-key="Player" data-genie-title="播放" element={<PageTransition transition="fade"><ErrorBoundary scope="Player"><Player /></ErrorBoundary></PageTransition>} />
                 <Route path="/history" data-genie-key="History" data-genie-title="历史" element={<PageTransition transition="slide-up"><ErrorBoundary scope="History"><History /></ErrorBoundary></PageTransition>} />
                 <Route path="/login" data-genie-key="Login" data-genie-title="登录" element={<PageTransition transition="slide-up"><ErrorBoundary scope="Login"><Login /></ErrorBoundary></PageTransition>} />
+                <Route path="/forgot-password" data-genie-key="ForgotPassword" data-genie-title="重置密码" element={<PageTransition transition="slide-up"><ErrorBoundary scope="ForgotPassword"><ForgotPassword /></ErrorBoundary></PageTransition>} />
                 <Route path="/profile" data-genie-key="Profile" data-genie-title="个人中心" element={<PageTransition transition="slide-up"><ErrorBoundary scope="Profile"><Profile /></ErrorBoundary></PageTransition>} />
                 <Route path="*" data-genie-key="NotFound" data-genie-title="未找到" element={<PageTransition transition="fade"><ErrorBoundary scope="NotFound"><NotFound /></ErrorBoundary></PageTransition>} />
               </AnimatedRoutes>

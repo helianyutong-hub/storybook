@@ -179,6 +179,19 @@ export default function Login() {
           </button>
         </div>
 
+        {/* 忘记密码入口（仅密码登录模式展示） */}
+        {!isRegister && (
+          <div className="mt-1.5 text-right">
+            <button
+              type="button"
+              onClick={() => nav('/forgot-password')}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              忘记密码？
+            </button>
+          </div>
+        )}
+
         {/* 确认密码（仅注册） */}
         {isRegister && (
           <>
