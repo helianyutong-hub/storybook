@@ -19,6 +19,11 @@ export default defineConfig({
     // 兼容微信内置浏览器 / 旧版 WebView
     target: ['es2015', 'chrome61'],
     cssTarget: 'chrome61',
+    // 生产构建压缩并彻底剔除所有注释（含法律声明横幅），部署产物不暴露源码注释
+    minify: 'esbuild',
+    esbuild: {
+      legalComments: 'none',
+    },
   },
   server: {
     host: '::',
